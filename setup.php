@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: setup.php 395 2014-11-16 18:39:27Z yllen $
+/*
+ * @version $Id: setup.php 367 2014-03-04 11:04:23Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -38,8 +35,11 @@ function plugin_init_webservices() {
 
    $PLUGIN_HOOKS['csrf_compliant']['webservices'] = true;
 
-   $PLUGIN_HOOKS["menu_toadd"]['webservices'] = array('config'  => 'PluginWebservicesClient');
-
+   if (Session::haveRight("config", "r")) {
+      $PLUGIN_HOOKS['menu_entry']['webservices']               = 'front/client.php';
+      $PLUGIN_HOOKS['submenu_entry']['webservices']['search']  = 'front/client.php';
+      $PLUGIN_HOOKS['submenu_entry']['webservices']['add']     = 'front/client.form.php?new=1';
+   }
    $PLUGIN_HOOKS['webservices']['webservices'] = 'plugin_webservices_registerMethods';
 
    //Store objects that can be retrieved when querying another object
@@ -134,19 +134,19 @@ function plugin_init_webservices() {
 function plugin_version_webservices() {
 
    return array('name'           => __('Web Services', 'webservices'),
-                'version'        => '1.5.0-ipm',
-                'author'         => 'F. Mohier, from Remi Collet, Nelly Mahu-Lasson',
+                'version'        => '1.4.3-ipm',
+                'author'         => 'F. Mohier, from Remi Collet, Nelly Mahu-Lasson, Walid Nouh',
                 'license'        => 'GPLv2+',
                 'homepage'       => 'https://forge.indepnet.net/projects/webservices',
-                'minGlpiVersion' => '0.85');
+                'minGlpiVersion' => '0.84');
 }
 
 
 // Optional : check prerequisites before install : may print errors or add to message after redirect
 function plugin_webservices_check_prerequisites() {
 
-   if (version_compare(GLPI_VERSION,'0.85','lt') || version_compare(GLPI_VERSION,'0.86','ge')) {
-      _e('Incompatible GLPI version. Requires 0.85', 'webservices');
+   if (version_compare(GLPI_VERSION,'0.84','lt') || version_compare(GLPI_VERSION,'0.85','ge')) {
+      _e('Incompatible GLPI version. Requires 0.84', 'webservices');
    } else if (!extension_loaded("soap")) {
       _e('Incompatible PHP Installation. Requires module soap', 'webservices');
    } else if (!function_exists("xmlrpc_encode")) {

@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: methodcommon.class.php 395 2014-11-16 18:39:27Z yllen $
+/*
+ * @version $Id: methodcommon.class.php 379 2014-04-06 15:49:28Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -749,15 +746,12 @@ class PluginWebservicesMethodCommon {
    static function checkUserRights($user, $right, $valright, $entity) {
       global $DB;
 
-      $query = "SELECT `glpi_profilerights`.`rights`
-                FROM `glpi_profilerights`
-                LEFT JOIN `glpi_profiles`
-                   ON (`glpi_profiles`.`id` = `glpi_profilerights`.`profiles_id`
+      $query = "SELECT $right
+                FROM `glpi_profiles`
                 INNER JOIN `glpi_profiles_users`
                    ON (`glpi_profiles`.`id` = `glpi_profiles_users`.`profiles_id`)
                 WHERE `glpi_profiles_users`.`users_id` = '$user'
-                      AND `glpi_profilerights`.`name` = '$right'
-                      AND (`glpi_profilerights`.`rights` & ". $valright.") ".
+                      AND $right IN ('$valright') ".
                       getEntitiesRestrictRequest(" AND ", "glpi_profiles_users", '', $entity, true);
 
       if ($result = $DB->query($query)) {

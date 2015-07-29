@@ -1,35 +1,36 @@
 <?php
-/**
- * @version $Id: xmlrpc.php 399 2015-01-09 09:26:22Z tsmr $
+/*
+ * @version $Id: xmlrpc.php 353 2013-09-18 14:00:53Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
+// ----------------------------------------------------------------------
+// Original Author of file: Remi Collet
+// Purpose of file: Manage list of config
+// ----------------------------------------------------------------------
 if (!function_exists("xmlrpc_encode")) {
    header("HTTP/1.0 500 Extension xmlrpc not loaded");
    die("Extension xmlrpc not loaded");
@@ -59,7 +60,7 @@ if (isset($_GET['session'])) {
    $session->setSession($_GET['session']);
 }
 
-include ("../../inc/includes.php");
+include (GLPI_ROOT . "/inc/includes.php");
 
 Plugin::load('webservices', true);
 
@@ -68,8 +69,20 @@ plugin_webservices_registerMethods();
 
 error_reporting(E_ALL);
 
-if (!array_key_exists('CONTENT_TYPE', $_SERVER)
-    || (strpos($_SERVER['CONTENT_TYPE'], 'text/xml') === false)) {
+// Fred : begin ...
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+   header('Access-Control-Allow-Origin: *');
+//   header('Access-Control-Allow-Origin: http://example.com');
+//   header("Access-Control-Allow-Credentials: true");
+//   header('Access-Control-Allow-Methods: GET, PUT, POST, DELETE, OPTIONS');
+//   header('Access-Control-Max-Age: 1000');
+   header('Access-Control-Allow-Headers: Content-Type, Content-Range, Content-Disposition, Content-Description');
+   header("HTTP/1.0 200");
+   die("CORS headers");
+}
+// Fred : end ...
+
+if (!array_key_exists('CONTENT_TYPE', $_SERVER) || strpos($_SERVER['CONTENT_TYPE'], 'text/xml') === false) {
    header("HTTP/1.0 500 Bad content type");
    die("Bad content type");
 }
@@ -79,10 +92,8 @@ if (!isset($GLOBALS["HTTP_RAW_POST_DATA"]) || empty($GLOBALS["HTTP_RAW_POST_DATA
 }
 
 $method    = "";
-$allparams = "";
-if (isset($GLOBALS["HTTP_RAW_POST_DATA"])) {
-   $allparams = xmlrpc_decode_request($GLOBALS["HTTP_RAW_POST_DATA"],$method,'UTF-8');
-}
+$allparams = xmlrpc_decode_request($GLOBALS["HTTP_RAW_POST_DATA"],$method,'UTF-8');
+
 if (empty($method) || !is_array($allparams)) {
    header("HTTP/1.0 500 Bad content");
 }
@@ -102,9 +113,9 @@ header("Content-type: text/xml");
 
 if ($iso) {
    decodeFromUtf8Array($resp);
-   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'iso-8859-1'));
+   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'ISO-8859-1'));
 } else {
    // request without method is a response ;)
-   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'utf-8', 'escaping'=>'markup'));
+   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'UTF-8'));
 }
 ?>

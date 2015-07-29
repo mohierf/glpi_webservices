@@ -3,7 +3,6 @@ Plugin Webservices developers :
 Xavier Caillaud
 Remi Collet
 Jean Marc Grisard
-François Legastelois
 Nelly Mahu-Lasson
 Walid Nouh
 

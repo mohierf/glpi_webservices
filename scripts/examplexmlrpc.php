@@ -1,6 +1,6 @@
 <?php
-/**
- * @version $Id: examplexmlrpc.php 396 2014-11-23 18:46:25Z yllen $
+/*
+ * @version $Id: examplexmlrpc.php 350 2013-05-22 13:38:57Z yllen $
  -------------------------------------------------------------------------
  webservices - WebServices plugin for GLPI
  Copyright (C) 2003-2013 by the webservices Development Team.
@@ -10,29 +10,20 @@
 
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -266,6 +257,30 @@ $session = login();
 
 
 /*
+* Create Profile
+*/
+$args['session'] = $session;
+$args['method']  = "glpi.createObjects";
+$args['fields']  = array('Profile' => array(array('name'                 => 'WSXML-RPC_Profile_01_TESTING',
+                                                  'interface'            => 'helpdesk',
+                                                  'faq'                  => 'r',
+                                                  'reservation_helpdesk' => '1',
+                                                  'create_ticket'        => '1',
+                                                  'add_followups'        => '1',
+                                                  'observe_ticket'       => '1',
+                                                  'password_update'      => '1',
+                                                  'helpdesk_hardware'    => '1',
+                                                  'helpdesk_item_type'   => array('Computer',
+                                                                                  'Monitor'),
+                                                  'show_group_ticket'    => '0',
+                                                  'show_group_hardware'  => '0',
+                                                  'is_default'           => '0')));
+
+$profile         = call_glpi($args);
+$profile         = $profile['Profile'][0]['id'];
+
+
+/*
 * Create 1 USER, 1 GROUP
 */
 $args['session'] = $session;
@@ -286,6 +301,24 @@ $args['fields']  = array('User'  => array(array('name'         => $glpi_test_use
 $result          = call_glpi($args);
 $user            = $result['User'][0]['id'];
 $group           = $result['Group'][0]['id'];
+
+
+/*
+* Link USER to PROFILE and GROUP
+*/
+$args['session'] = $session;
+$args['method']  = "glpi.createObjects";
+$args['fields']  = array('Group_User'   => array(array('users_id'   => $user,
+                                                       'groups_id'  => $group,
+                                                       'is_dynamic' => 0)),
+
+                         'Profile_User' => array(array('users_id'     => $user,
+                                                       'profiles_id'  => $profile,
+                                                       'entities_id'  => $entity,
+                                                       'is_recursive' => 1,
+                                                       'is_dynamic'   => 0)));
+
+call_glpi($args);
 
 
 /*

@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: client.class.php 397 2014-11-29 23:54:21Z ddurieux $
+/*
+ * @version $Id: client.class.php 353 2013-09-18 14:00:53Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -38,32 +35,25 @@ class PluginWebservicesClient extends CommonDBTM {
 
    public $dohistory        = true;
 
-   static $rightname = 'config';
-
-
-
-   static function canCreate() {
-      return Session::haveRight(static::$rightname, UPDATE);
-   }
-
-
-   /**
-    * @since version 0.85
-   **/
-   static function canPurge() {
-      return Session::haveRight(static::$rightname, UPDATE);
-   }
-
 
    static function getTypeName($nb=0) {
       return _n('Client', 'Clients', $nb, 'webservices');
    }
 
 
+   static function canCreate() {
+      return Session::haveRight('config', 'w');
+   }
+
+
+   static function canView() {
+      return Session::haveRight('config', 'r');
+   }
+
+
    function defineTabs($options=array()) {
 
-      $ong = array();
-      $this->addDefaultFormTab($ong);
+      $ong = array('empty' => $this->getTypeName(1));
       $this->addStandardTab(__CLASS__, $ong, $options);
       $this->addStandardTab('Log', $ong, $options);
 
@@ -129,8 +119,16 @@ class PluginWebservicesClient extends CommonDBTM {
 
 
    function showForm ($ID, $options=array()) {
+      global $DB, $CFG_GLPI;
 
-      $this->initForm($ID, $options);
+      if ($ID > 0) {
+         $this->check($ID,'r');
+      } else {
+         $this->check(-1,'w');
+         $this->getEmpty();
+      }
+
+      $this->showTabs($options);
       $this->showFormHeader($options);
 
       echo "<tr class='tab_bg_1'>";
@@ -198,6 +196,8 @@ class PluginWebservicesClient extends CommonDBTM {
 
       $this->showFormButtons($options);
 
+      echo "<div id='tabcontent'></div>";
+      echo "<script type='text/javascript'>loadDefaultTab();</script>";
    }
 
 
@@ -362,35 +362,5 @@ class PluginWebservicesClient extends CommonDBTM {
          $DB->query($query) or die($DB->error());
       }
    }
-
-
-   /**
-    * @since version 0.85
-   **/
-   static function getMenuName() {
-      return __('Webservices');
-   }
-
-
-   /**
-    * @since version 0.85
-   **/
-   static function getMenuContent() {
-
-      $menu          = array();
-      $menu['title'] = self::getMenuName();
-      $menu['page']  = "/plugins/webservices/front/client.php";
-
-      $menu['title']           = self::getMenuName();
-      $menu['page']            = self::getSearchURL(false);
- //     $menu['links']['search'] = self::getSearchURL(false);
-
-         if (Session::haveRight("config", UPDATE)) {
-         $menu['links']['add'] = self::getFormURL(false);
-      }
-      return $menu;
-   }
-
-
 }
 ?>

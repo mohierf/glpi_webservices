@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: client.form.php 397 2014-11-29 23:54:21Z ddurieux $
+/*
+ * @version $Id: client.form.php 351 2013-05-22 14:41:59Z yllen $
  -------------------------------------------------------------------------
-LICENSE
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
 
- This file is part of Webservices plugin for GLPI.
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ LICENSE
+
+ This file is part of webservices.
+
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -40,24 +37,23 @@ if (!isset($_GET["id"])) {
 $webservices = new PluginWebservicesClient();
 
 if (isset($_POST["add"])) {
-   $webservices->check(-1, CREATE,$_POST);
+   $webservices->check(-1,'w',$_POST);
    $webservices->add($_POST);
    Html::back();
 
 } else if (isset($_POST["update"])) {
-   $webservices->check($_POST["id"], UPDATE);
+   $webservices->check($_POST["id"],'w');
    $webservices->update($_POST);
    Html::back();
 
-} else if (isset($_POST["purge"])) {
-   $webservices->check($_POST["id"], PURGE);
+} else if (isset($_POST["delete"])) {
+   $webservices->check($_POST["id"],'w');
    $webservices->delete($_POST);
    Html::redirect($CFG_GLPI["root_doc"]."/plugins/webservices/front/client.php");
 
 } else {
-   Html::header(__('Web Services', 'webservices'), $_SERVER['PHP_SELF'], "config",
-                "pluginWebservicesClient");
-   $webservices->display(array('id' => $_GET["id"]));
+   Html::header(__('Web Services', 'webservices'), $_SERVER['PHP_SELF'], "plugins", "webservices");
+   $webservices->showForm($_GET["id"]);
    Html::footer();
 }
 ?>

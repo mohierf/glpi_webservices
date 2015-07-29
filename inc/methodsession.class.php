@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: methodsession.class.php 398 2014-12-05 16:15:48Z yllen $
+/*
+ * @version $Id: methodsession.class.php 353 2013-09-18 14:00:53Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -82,12 +79,11 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       $identificat = new Auth();
 
       if ($identificat->Login($params['login_name'], $params['login_password'], true)) {
-         session_write_close();
          return (array('id'        => Session::getLoginUserID(),
                        'name'      => $_SESSION['glpiname'],
                        'realname'  => $_SESSION['glpirealname'],
                        'firstname' => $_SESSION['glpifirstname'],
-                       'session'   => $_SESSION['valid_id']));
+                       'session'   => session_id()));
       }
       return self::Error($protocol, WEBSERVICES_ERROR_LOGINFAILED, '',
                          Html::clean($identificat->getErr()));

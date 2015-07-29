@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: methodhelpdesk.class.php 396 2014-11-23 18:46:25Z yllen $
+/*
+ * @version $Id: methodhelpdesk.class.php 379 2014-04-06 15:49:28Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -786,7 +783,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
                             'ticket=' . $params['ticket']);
       }
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -802,7 +799,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                                'user=' . $params['user']);
          }
          $input['users_id'] = $params['user'];
-         if (!$ticket_user->can(-1, UPDATE, $input)) {
+         if (!$ticket_user->can(-1, 'w', $input)) {
             return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
          }
       }
@@ -860,7 +857,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                             'satisfaction=' . $params['satisfaction']);
       }
 
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
       }
 
@@ -876,7 +873,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $input['comment'] = addslashes($params['comment']);
       }
 
-      if (!$inquest->can($params['ticket'], UPDATE)) {
+      if (!$inquest->can($params['ticket'], 'w')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -902,7 +899,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       if (isset($params['help'])) {
          return array('approval' => 'integer,mandatory',
-                      'status'   => 'integer,mandatory',
+                      'id2name'  => 'bool,optional',
+                      'status'   => 'text,mandatory',
                       'comment'  => 'text,optional',
                       'help'     => 'bool,optional');
       }
@@ -910,6 +908,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
+
+      $ticket = new Ticket();
 
       if (!isset($params['approval'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'approval');
@@ -925,7 +925,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                             'status=' . $params['status']);
       }
 
-      if ($params['status'] == TicketValidation::REFUSED && !isset($params['comment'])) {
+      if ($params['status'] == 'rejected' && !isset($params['comment'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'comment');
       }
 
@@ -940,16 +940,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $input['comment_validation'] = addslashes($params['comment']);
       }
 
-      $ticket = new Ticket();
-      if ($ticket->getFromDB($valid->getField('tickets_id'))) {
-         $tickettype = $ticket->fields['type'];
-      }
-
-      if ((($ticketype == 1)
-           && !$valid->can($params['approval'], TicketValidation::VALIDATEINCIDENT))
-          || (($ticketype == 2)
-              && !$valid->can($params['approval'], TicketValidation::VALIDATEREQUEST))) {
-
+      if (!$valid->can($params['approval'], 'w')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -995,7 +986,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                             'ticket=' . $params['ticket']);
       }
 
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -1042,15 +1033,15 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                = Html::clean(Dropdown::getDropdownName('glpi_slalevels',
                                                        $resp['slalevels_next_id']));
          $resp['urgency_name']
-               = Html::clean(Ticket::getUrgencyName($resp['urgency']));
+               = Ticket::getUrgencyName($resp['urgency']);
          $resp['impact_name']
-               = Html::clean(Ticket::getImpactName($resp['impact']));
+               = Ticket::getImpactName($resp['impact']);
          $resp['priority_name']
-               = Html::clean(Ticket::getPriorityName($resp['priority']));
+               = Ticket::getPriorityName($resp['priority']);
          $resp['type_name']
-               = Html::clean(Ticket::getTicketTypeName($resp['type']));
+               = Ticket::getTicketTypeName($resp['type']);
          $resp['global_validation_name']
-               = Html::clean(TicketValidation::getStatus($resp['global_validation']));
+               = TicketValidation::getStatus($resp['global_validation']);
          $resp['locations_name']
                = Html::clean(Dropdown::getDropdownName('glpi_locations', $resp['locations_id']));
 
@@ -1072,16 +1063,15 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $resp['validations']    = array ();
       $resp['satisfaction']   = array ();
 
-      if (Session::haveRightsOr('followup', array(TicketFollowup::SEEPUBLIC,
-                                                  TicketFollowup::SEEPRIVATE))) {
+      if (Session::haveRight('observe_ticket', '1')) {
          // Followups
          $query = "SELECT *
                    FROM `glpi_ticketfollowups`
                    WHERE `tickets_id` = '" . $params['ticket'] . "' ";
 
-         if (!Session::haveRight('followup', TicketFollowup::SEEPRIVATE)) {
-            $query .= " AND (`is_private` = '0'
-                             OR `users_id` = '" . Session::getLoginUserID() . "' ) ";
+         if (!Session::haveRight("show_full_ticket", "1")) {
+            $query .= " AND (`is_private`='0'
+                             OR `users_id` ='" . Session::getLoginUserID() . "' ) ";
          }
          $query .= " ORDER BY `date` DESC";
 
@@ -1095,17 +1085,15 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             }
             $resp['followups'][] = $data;
          }
-      }
-      if (Session::haveRightsOr('task', array(TicketTask::SEEPUBLIC, TicketTask::SEEPRIVATE))) {
 
          // Tasks
          $query = "SELECT *
                    FROM `glpi_tickettasks`
                    WHERE `tickets_id` = '" . $params['ticket'] . "' ";
 
-         if (!Session::haveRight('task', TicketTask::SEEPRIVATE)) {
-            $query .= " AND (`is_private` = '0'
-                             OR `users_id` = '" . Session::getLoginUserID() . "' ) ";
+         if (!Session::haveRight("show_full_ticket", "1")) {
+            $query .= " AND (`is_private`='0'
+                             OR `users_id` ='" . Session::getLoginUserID() . "' ) ";
          }
          $query .= " ORDER BY `date` DESC";
 
@@ -1119,22 +1107,23 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             }
             $resp['tasks'][] = $data;
          }
+
+         // Documents
+         $resp['documents'] = PluginWebservicesMethodTools::getDocForItem($ticket,
+                                                                          isset($params['id2name']));
+
+         // History
+         $resp['events'] = Log::getHistoryData($ticket, 0, $_SESSION['glpilist_limit']);
+         foreach ($resp['events'] as $key => $val) {
+            $resp['events'][$key]['change'] = Html::clean($resp['events'][$key]['change']);
+         }
       }
 
-      // Documents
-      $resp['documents'] = PluginWebservicesMethodTools::getDocForItem($ticket,
-                                                                       isset($params['id2name']));
+      if (Session::haveRight('create_request_validation', 1)
+              || Session::haveRight('create_incident_validation', 1)
+              || Session::haveRight('validate_request', 1)
+              || Session::haveRight('validate_incident', 1)) {
 
-      // History
-      $resp['events'] = Log::getHistoryData($ticket, 0, $_SESSION['glpilist_limit']);
-      foreach ($resp['events'] as $key => $val) {
-         $resp['events'][$key]['change'] = Html::clean($resp['events'][$key]['change']);
-      }
-
-      if (Session::haveRightsOr('ticketvalidation', array(TicketValidation::CREATEREQUEST,
-                                                          TicketValidation::CREATEINCIDENT,
-                                                          TicketValidation::VALIDATEREQUEST,
-                                                          TicketValidation::VALIDATEINCIDENT))) {
          $query = "SELECT *
                    FROM `glpi_ticketvalidations`
                    WHERE `tickets_id` = '".$params['ticket']."' ";
@@ -1214,16 +1203,15 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    static function methodAddTicketFollowup($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array('ticket'      => 'integer,mandatory',
-                      'content'     => 'string,mandatory',
+         return array('ticket'  => 'integer,mandatory',
+                      'content' => 'string,mandatory',
                       'users_login' => 'string,optional',
-                      'close'       => 'bool,optional',
-                      'reopen'      => 'bool,optional',
-                      'source'      => 'string,optional',
-                      'private'     => 'bool,optional',
-                      'help'        => 'bool,optional');
+                      'close'   => 'bool,optional',
+                      'reopen'  => 'bool,optional',
+                      'source'  => 'string,optional',
+                      'private' => 'bool,optional',
+                      'help'    => 'bool,optional');
       }
-
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
@@ -1236,7 +1224,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       if (isset($params['users_login']) && is_string($params['users_login'])) {
          $user = new User();
-         if (!$users_id = $user->getIdByName($params['users_login']))
+         if(!$users_id = $user->getIdByName($params['users_login']))
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
                                'unable to get users_id with the users_login');
       }
@@ -1249,7 +1237,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'ticket');
       }
 
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'],'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -1258,11 +1246,10 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       }
 
       if (in_array($ticket->fields["status"], $ticket->getSolvedStatusArray())
-          && !$ticket->canApprove()) {// Logged user not allowed
-
-         if (isset($users_id)) {// If we get the users id
+            && !$ticket->canApprove()) {// Logged user not allowed
+         if(isset($users_id)) {// If we get the users id
             $approbationSolution = self::checkApprobationSolution($users_id, $ticket);
-            if (!$approbationSolution) {
+            if(!$approbationSolution) {
                return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
             }
          } else {
@@ -1287,15 +1274,16 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $private = (isset($params['private']) && $params['private'] ? 1 : 0);
 
       $followup = new TicketFollowup();
-      $user     = 0;
+      $user = 0;
       if (isset($users_id)) {
          $user = $users_id;
       }
-      $data = array('tickets_id'       => $params['ticket'],
-                    'requesttypes_id'  => $source,
-                    'is_private'       => $private,
-                    'users_id'         => $user,
-                    'content'          => addslashes(Toolbox::clean_cross_side_scripting_deep($params["content"])));
+      $data = array('tickets_id' => $params['ticket'],
+                    'requesttypes_id'
+                                 => $source,
+                    'is_private' => $private,
+                    'users_id'   => $user,
+                    'content'    => addslashes(Toolbox::clean_cross_side_scripting_deep($params["content"])));
 
       if (isset($params['close'])) {
          if (isset($params['reopen'])) {
@@ -1356,6 +1344,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    **/
    static function checkApprobationSolution ($users_id, Ticket $ticket) {
 
+      if(!self::checkUserRights(Session::getLoginUserID(), 'update_ticket', 1,
+                                $ticket->getField('entities_id'))){
+         return false;
+      }
+
       if (!($ticket->fields["users_id_recipient"] === $users_id
               || $ticket->isUser(CommonITILActor::REQUESTER, $users_id)
               || (sizeof(Group_User::getUserGroups($users_id) > 0)
@@ -1393,7 +1386,6 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                       'private' => 'bool,optional',
                       'help'    => 'bool,optional');
       }
-
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
@@ -1407,7 +1399,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'ticket');
       }
 
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -1550,7 +1542,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          if (!is_numeric($params['user']) || ($params['user'] < 0)) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'user');
          }
-         if (Session::haveRightsOr('ticket', array(Ticket::READALL, Ticket::READGROUP))
+         if (Session::haveRight('show_all_ticket', '1')
+             || Session::haveRight('show_group_ticket', '1')
              || ($params['user'] == Session::getLoginUserID())) {
             // restrict to author parameter
             $where = " AND `glpi_tickets_users_request`.`users_id` = '" . $params['user'] . "'";
@@ -1559,7 +1552,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
 
       } else {
-         if (Session::haveRightsOr('ticket', array(Ticket::READALL, Ticket::READGROUP))) {
+         if (Session::haveRight('show_all_ticket', '1')
+             || Session::haveRight('show_group_ticket', '1')) {
             $where = ''; // Restrict will come from group (if needed)
          } else {
             // Only connected user's tickets'
@@ -1574,8 +1568,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'group');
          }
 
-         if (Session::haveRight('ticket', Ticket::READALL)
-             || (Session::haveRight('ticket', Ticket::READGROUP)
+         if (Session::haveRight('show_all_ticket', '1')
+             || (Session::haveRight('show_group_ticket', '1')
                  && in_array($params['group'], $_SESSION['glpigroups']))) {
             // restrict to group parameter
             $where = " AND `glpi_groups_tickets_request`.`groups_id` = '" . $params['group'] . "'";
@@ -1584,8 +1578,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
 
       } else {
-         if (Session::haveRight('ticket', Ticket::READGROUP)
-             && !Session::haveRight('ticket', Ticket::READALL)) {
+         if (Session::haveRight('show_group_ticket', '1')
+             && !Session::haveRight('show_all_ticket', '1')) {
 
             // Connected user's group'
             if (count($_SESSION['glpigroups']) > 0) {
@@ -1599,7 +1593,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       }
 
       // Security
-      if (empty($where) && !Session::haveRight('ticket', Ticket::READALL)) {
+      if (empty($where) && !Session::haveRight('show_all_ticket', '1')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '', 'profil');
       }
 
@@ -1678,11 +1672,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       // Status
       if (isset($params['status'])) {
-         $status = '';
-         foreach (Ticket::getAllStatusArray(true) as $key => $val) {
-            $status[] = $key;
-         }
-         if (!in_array($params['status'], $status)) {
+         if (!in_array($params['status'], Ticket::getAllowedStatusArray(true))) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'status');
          }
          switch ($params['status']) {
@@ -1692,14 +1682,14 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
             case 'notclosed' :
                $status = Ticket::getAllStatusArray();
-               unset($status[Ticket::CLOSED]);
-               $where .= " AND `glpi_tickets`.`status` IN ('".implode("','",array_keys($status))."') ";
+               unset($status[CLOSED]);
+               $where .= " AND `glpi_tickets`.`status` IN ('".implode("','",$status)."') ";
                break;
 
             case 'notold' :
                $status = Ticket::getAllStatusArray();
-               unset($status[Ticket::SOLVED], $status[Ticket::CLOSED]);
-               $where .= " AND `glpi_tickets`.`status` IN ('".implode("','",array_keys($status))."') ";
+               unset($status[SOLVED], $status[CLOSED]);
+               $where .= " AND `glpi_tickets`.`status` IN ('".implode("','",$status)."') ";
                break;
 
             case 'old' :
@@ -1742,10 +1732,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          if (!empty($params['itemtype']) && !class_exists($params['itemtype'])) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'itemtype');
          }
-         $join .= "INNER JOIN `glpi_items_tickets`
-                         ON (`glpi_tickets`.`id` = `glpi_items_tickets`.`tickets_id` ) ";
-
-         $where .= " AND `glpi_items_tickets`.`itemtype`='" . $params['itemtype'] . "'";
+         $where .= " AND `glpi_tickets`.`itemtype`='" . $params['itemtype'] . "'";
       }
 
       if (isset($params['item'])) {
@@ -1755,7 +1742,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          if (!is_numeric($params['item']) || $params['item'] <= 0) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'item');
          }
-         $where .= " AND `glpi_items_tickets`.`items_id`='" . $params['item'] . "'";
+         $where .= " AND `glpi_tickets`.`items_id`='" . $params['item'] . "'";
       }
 
       $orders = array();
@@ -2077,8 +2064,6 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $data['slalevels_name']
                         = Html::clean(Dropdown::getDropdownName('glpi_slalevels',
                                                                 $data['slalevels_id']));
-               $data['global_validation_name']
-                     = Html::clean(TicketValidation::getStatus($data['global_validation']));
                }
                $resp[] = $data;
             }
@@ -2096,7 +2081,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $item = new $params['options']['itemtype']();
       $resp = array();
 
-      if ($item->can($params['data']['id'], READ)) {
+      if ($item->can($params['data']['id'], 'r')) {
           $query = "SELECT ".Ticket::getCommonSelect()."
                     FROM `glpi_tickets` ".Ticket::getCommonLeftJoin()."
                     WHERE (`items_id` = '".$params['data']['id']."'
@@ -2147,7 +2132,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $item   = new $params['options']['linked_itemtype']();
       $output = $resp = array();
 
-      if ($item->can(-1, READ)) {
+      if ($item->can(-1, 'r')) {
 
          if (isset($params['options']['orderby_date'])) {
             $date = $params['options']['orderby_date'];
@@ -2156,13 +2141,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
 
          $RESTRICT = "";
-         if ($item->maybePrivate()
-             && ((($item == 'Followup')
-                  && !Session::haveRightsOr('followup', array(TicketFollowup::SEEPUBLIC,
-                                                              TicketFollowup::SEEPRIVATE)))
-                 || (($item == 'Task')
-                     && !Session::haveRightsOr('task', array(TicketTask::SEEPUBLIC,
-                                                     TicketTask::SEEPRIVATE))))) {
+         if ($item->maybePrivate() && !Session::haveRight("show_full_ticket","1")) {
             $RESTRICT = " AND (`is_private` = '0'
                                OR `users_id` ='".Session::getLoginUserID()."') ";
          }
@@ -2212,11 +2191,6 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       $ticket = new Ticket();
 
-      if (!$ticket->canSolve()) {
-         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
-      }
-
-
       if (!isset($params['ticket'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'ticket');
       }
@@ -2230,7 +2204,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                             'type=' . $params['type']);
       }
 
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
       }
 
@@ -2244,6 +2218,10 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       if (isset($params['type'])) {
          $input['solutiontypes_id'] = $params['type'];
+      }
+
+      if (!$ticket->canSolve($params['ticket'], 'w')) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
       if ($ticket->update($input)) {
@@ -2279,7 +2257,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
-      if (!Session::haveRight('ticket', Ticket::ASSIGN)) {
+      if (!Session::haveRight("assign_ticket","1")) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -2298,13 +2276,16 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
                             'ticket=' . $params['ticket']);
       }
-      if (!$ticket->can($params['ticket'], READ)) {
+      if (!$ticket->can($params['ticket'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
+      }
+      if (!$ticket->getFromDB($params['ticket'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
       }
 
       $ticket_user = new Ticket_User();
-      $user        = array('tickets_id'   => $params['ticket'],
-                           'type'         => CommonITILActor::ASSIGN);
+      $user = array('tickets_id'   => $params['ticket'],
+                    'type'         => CommonITILActor::ASSIGN);
 
       // technician : optionnal,  default = none
       if (isset($params['user'])) {
@@ -2317,8 +2298,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          if ($ticket->getFromDB($params['ticket'])) {
             $entity = $ticket->getField('entities_id');
          }
-         if (!$ticket_user->can(-1, UPDATE, $user)
-             || !self::checkUserRights($params['user'], 'ticket', Ticket::OWN, $entity)) {
+         if (!$ticket_user->can(-1, 'w', $user)
+             || !self::checkUserRights($params['user'], "own_ticket", 1, $entity)) {
             return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
          }
          if ($ticket->isUser(CommonITILActor::ASSIGN, $user['users_id'] )) {
@@ -2357,7 +2338,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'group');
          }
          $group['groups_id'] = $params['group'];
-         if (!$group_ticket->can(-1, UPDATE, $group)) {
+         if (!$group_ticket->can(-1, 'w', $group)) {
             return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
          }
          if ($ticket->isGroup(CommonITILActor::ASSIGN, $params['group'])) {
@@ -2380,7 +2361,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'supplier');
          }
          $supplier['suppliers_id'] = $params['supplier'];
-         if (!$supplier_ticket->can(-1, UPDATE, $supplier)) {
+         if (!$supplier_ticket->can(-1, 'w', $supplier)) {
             return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
          }
          if ($ticket->isSupplier(CommonITILActor::ASSIGN, $params['supplier'])) {
@@ -2395,6 +2376,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       }
 
       return self::methodGetTicket(array('ticket' => $params['ticket']), $protocol);
+      return self::Error($protocol, WEBSERVICES_ERROR_FAILED, '',self::getDisplayError());
    }
 }
 ?>

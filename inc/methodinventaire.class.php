@@ -1,32 +1,29 @@
 <?php
-/**
- * @version $Id: methodinventaire.class.php 399 2015-01-09 09:26:22Z tsmr $
+/*
+ * @version $Id: methodinventaire.class.php 374 2014-03-25 18:37:03Z yllen $
  -------------------------------------------------------------------------
+ webservices - WebServices plugin for GLPI
+ Copyright (C) 2003-2013 by the webservices Development Team.
+
+ https://forge.indepnet.net/projects/webservices
+ -------------------------------------------------------------------------
+
  LICENSE
 
- This file is part of Webservices plugin for GLPI.
+ This file is part of webservices.
 
- Webservices is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ webservices is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
  (at your option) any later version.
 
- Webservices is distributed in the hope that it will be useful,
+ webservices is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- GNU Affero General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with Webservices. If not, see <http://www.gnu.org/licenses/>.
-
- @package   Webservices
- @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
- @license   AGPL License 3.0 or (at your option) any later version
-            http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
- @link      http://www.glpi-project.org/
- @since     2009
+ You should have received a copy of the GNU General Public License
+ along with webservices. If not, see <http://www.gnu.org/licenses/>.
  --------------------------------------------------------------------------
  */
 
@@ -70,7 +67,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if(!Session::haveRight('config', 'w')){
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -201,7 +198,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '', $params['itemtype']);
       }
       if (!$item->getFromDB($p['id'])
-          || !$item->can($p['id'], READ)) {
+             || !$item->can($p['id'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -305,7 +302,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             $toformat = array('data'          => $item->fields,
                               'searchOptions' => Search::getOptions(get_class($item)),
                               'options'       => $params['options']);
-            parent::formatDataForOutput($toformat, $resp);
+            Pparent::formatDataForOutput($toformat, $resp);
             $output[$item->fields['id']] = $resp;
       }
       return $output;
@@ -322,13 +319,13 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    static function getNetworkports($protocol, $params=array(), $original_params=array()) {
       global $DB;
 
-      if (!Session::haveRight("networking", READ)) {
+      if (!Session::haveRight("networking", "r")) {
          return array();
       }
       $item = new $params['options']['itemtype']();
       $resp = array();
 
-      if ($item->can($params['data']['id'], READ)) {
+      if ($item->can($params['data']['id'], 'r')) {
          //Get all ports for the object
          $ports = getAllDatasFromTable('glpi_networkports',
                                        "`itemtype` = '".Toolbox::addslashes_deep($params['options']['itemtype']).
@@ -366,7 +363,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    static function getSoftwares($protocol, $params=array(), $original_params=array()) {
       global $DB, $WEBSERVICE_LINKED_OBJECTS;
 
-      if (!Session::haveRight("software", READ)) {
+      if (!Session::haveRight("software", "r")) {
          return array();
       }
       $item = new $params['options']['itemtype']();
@@ -376,7 +373,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       //Store softwares, versions and licenses
       $softwares = array();
 
-      if ($item->can($params['data']['id'], READ) && $software->can(-1, READ)) {
+      if ($item->can($params['data']['id'], 'r') && $software->can(-1,'r')) {
 
          foreach (array('SoftwareVersion', 'SoftwareLicense') as $itemtype) {
             $link_table = "glpi_computers_".Toolbox::addslashes_deep(strtolower($itemtype))."s";
@@ -435,7 +432,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       $software = new Software();
       $resp     = array();
 
-      if ($software->can($params['data']['id'], READ)) {
+      if ($software->can($params['data']['id'], 'r')) {
          $query = "SELECT `gsv`.*
                    FROM `".Toolbox::addslashes_deep($item->getTable())."` AS gsv,
                         `glpi_softwares` AS gs
@@ -651,7 +648,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       //Display help for this function
       if (isset($params['help'])) {
 
-         foreach (Search::getOptions('State') as $itemtype => $option) {
+         foreach (Search::getOptions('States') as $itemtype => $option) {
 
             if (!isset($option['common'])) {
                if (isset($option['linkfield']) && $option['linkfield'] != '' ) {
@@ -683,7 +680,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if(!Session::haveRight('config', 'w')){
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -834,7 +831,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if(!Session::haveRight('config', 'w')){
          $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -864,7 +861,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                $datas['entities_id'] = $_SESSION["glpiactive_entity"];
             }
 
-            if (!$item->can(-1, CREATE ,$datas)) {
+            if (!$item->can(-1,'w',$datas)) {
                $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
                                                   '', self::getDisplayError());
             } else {
@@ -908,7 +905,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if(!Session::haveRight('config', 'w')){
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -920,21 +917,15 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       $resp    = array();
       $errors  = array();
+
       foreach($params['fields'] as $itemtype => $items) {
-         foreach($items as $num => $key) {
-            foreach($key as $name => $value) {
-               $tab[$name] = $value;
-               $item       = new $itemtype();
-               $right = 'DELETE';
-               if (!$item->maybeDeleted) {
-                  $right = 'PURGE';
-               }
-               if(!$item->can($tab['id'], $right)){
-                  $errors[$itemtype][$tab['id']] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
-                                                              '', self::getDisplayError());
-               } else {
-                  $resp[$itemtype][$tab['id']] = $item->delete(array('id' => $tab['id']), $tab['force']);
-               }
+         foreach($items as $items_id => $force) {
+            $item = new $itemtype();
+            if(!$item->can($items_id, 'd')){
+               $errors[$itemtype][$items_id] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
+                                                           '', self::getDisplayError());
+            } else {
+               $resp[$itemtype][$items_id] = $item->delete(array('id' => $items_id), $force);
             }
          }
       }
@@ -1000,7 +991,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             }
 
 
-            if (!$item->can($fields[$id_item], UPDATE, $datas)) {
+            if (!$item->can($fields[$id_item],'w',$datas)) {
                $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
                                                   '', self::getDisplayError());
             } else {
@@ -1044,7 +1035,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if(!Session::haveRight('config', 'w')){
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -1078,7 +1069,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                   $data['computers_id']   = $links['from_item']['id'];
                   $data['itemtype']       = $links['to_item']['itemtype'];
 
-                  if (!$comp_item->can(-1, UPDATE, $data)) {
+                  if (!$comp_item->can(-1,'w',$data)) {
                      $errors[] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '',
                                              self::getDisplayError());
                   } else {
@@ -1126,7 +1117,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                   $linked = false;
 
                   for ($i=0 ; $i<$quantity ; $i++) {
-                     if (!$comp_device->can(-1, UPDATE, $data)) {
+                     if (!$comp_device->can(-1,'w',$data)) {
                         $errors[] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
                                                 '',self::getDisplayError());
                      } else {
@@ -1194,7 +1185,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       $orders = array('id'     => '`glpi_users`.`id`',
-                      'name'   => ($_SESSION['glpinames_format'] == User::FIRSTNAME_BEFORE
+                      'name'   => ($_SESSION['glpinames_format'] == FIRSTNAME_BEFORE
                                     ? '`glpi_users`.`firstname`,`glpi_users`.`realname`'
                                     : '`glpi_users`.`realname`,`glpi_users`.`firstname`'),
                       'login'  => '`glpi_users`.`name`');
@@ -1237,7 +1228,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          $query .= " AND `glpi_users`.`name` LIKE '" . addslashes($params['login']) . "'";
       }
       if (isset($params['name'])) {
-         if ($_SESSION['glpinames_format'] == User::FIRSTNAME_BEFORE) {
+         if ($_SESSION['glpinames_format'] == FIRSTNAME_BEFORE) {
             $query .= " AND CONCAT(`glpi_users`.`firstname`,' ',`glpi_users`.`realname`)";
          } else {
             $query .= " AND CONCAT(`glpi_users`.`realname`,' ',`glpi_users`.`firstname`)";
@@ -1558,7 +1549,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          exit();
       }
 
-      if (!Session::haveRight("infocom", READ)) {
+      if (!Session::haveRight("infocom", "r")) {
          return array();
       }
       $infocom = new InfoCom();
@@ -1566,7 +1557,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       $item->getTypeName();
       if (!$infocom->getFromDBforDevice($params['itemtype'], $params['id'])
-          || !$item->can($params['id'], READ)) {
+          || !$item->can($params['id'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
@@ -1611,8 +1602,8 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       $item = new $params['itemtype']();
       if (!$item->getFromDB($params['id'])
-          || !Session::haveRight('contract', READ)
-          || !$item->can($params['id'], READ)) {
+          || !Session::haveRight('contract','r')
+          || !$item->can($params['id'], 'r')) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
