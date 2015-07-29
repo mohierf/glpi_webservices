@@ -134,7 +134,7 @@ function plugin_init_webservices() {
 function plugin_version_webservices() {
 
    return array('name'           => __('Web Services', 'webservices'),
-                'version'        => '1.5.0-ipm',
+                'version'        => '1.5.0-fork',
                 'author'         => 'F. Mohier, from Remi Collet, Nelly Mahu-Lasson',
                 'license'        => 'GPLv2+',
                 'homepage'       => 'https://forge.indepnet.net/projects/webservices',
