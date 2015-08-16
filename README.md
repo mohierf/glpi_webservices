@@ -1,9 +1,11 @@
 # glpi_webservices
 Web Services plugin for Glpi
+
 A Glpi plugin to access GLPI database with Web services
 
 This project is forked from the original https://forge.indepnet.net/projects/webservices. 
-Some modifications due to using this project in production environment ...
+
+Most modifications are due to using this plugin in production environment and some features needed to be enriched.
 
 ##Don't know Glpi?
 
