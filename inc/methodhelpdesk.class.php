@@ -1425,7 +1425,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $document_name = addslashes(sprintf(__('%1$s %2$s'), _x('phone', 'Number'),
                                              $ticket->fields['id']));
       }
-      $filename = tempnam(GLPI_DOC_DIR . '/_tmp', 'PWS');
+      $filename = tempnam(GLPI_TMP_DIR, 'PWS');
       $response = parent::uploadDocument($params, $protocol, $filename, $document_name);
       //An error occured during document upload
       if (parent::isError($protocol, $response)) {
