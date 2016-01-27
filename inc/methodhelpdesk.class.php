@@ -377,29 +377,17 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $debug = false;
       if (isset($params['debug'])) {
          $debug=true;
-        $row['ws']="kiosks.getHelpdeskConfiguration";
+         $row['ws']="glpi.getHelpdeskConfiguration";
       }
       
       $where = $join = $fields = '';
-      
-      // Entities
-      if (isset($params['entitiesList'])) {
-         $row['entitiesList']=$params['entitiesList'];
-         if (!Session::haveAccessToAllOfEntities($params['entitiesList'])) {
-            return (array( 'error' => "Access to all required entities is not allowed!" ));
-         }
-         $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', $params['entitiesList'], true) .
-                     $where;
-      } else {
-         $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true) .
-                     $where;
-      }
+
+      $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true) .
+                  $where;
+      $row['where']=$where;
 
       // Order
       $order = "entity_name ASC, completename ASC";
-      if (isset($params['order'])) {
-         $order = $params['order'];
-      }
       $row['order']=$order;
 
       $join .= "
@@ -428,7 +416,9 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $row['query'] = $query;
 
       if ($debug) $rows[] = $row;
-      
+
+      $rows['types'] = array ("request", "incident");
+
       $result = $DB->query($query);
       while ($data=$DB->fetch_array($result)) {
          $row = array();
@@ -446,7 +436,6 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   // Find ticket template if available ...
                   $rowTemplate = array();
                   $track = new Ticket();
-                  // $tt = $track->getTicketTemplateToUse(0, Ticket::DEMAND_TYPE, $value, 0);
                   $tt = $track->getTicketTemplateToUse($value);
 
                   if (isset($tt->predefined) && count($tt->predefined)) {
@@ -469,7 +458,6 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   // Find ticket template if available ...
                   $rowTemplate = array();
                   $track = new Ticket();
-                  // $tt = $track->getTicketTemplateToUse(0, Ticket::INCIDENT_TYPE, $value, 0);
                   $tt = $track->getTicketTemplateToUse($value);
 
                   if (isset($tt->predefined) && count($tt->predefined)) {
