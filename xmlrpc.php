@@ -27,10 +27,6 @@
  --------------------------------------------------------------------------
  */
 
-// ----------------------------------------------------------------------
-// Original Author of file: Remi Collet
-// Purpose of file: Manage list of config
-// ----------------------------------------------------------------------
 if (!function_exists("xmlrpc_encode")) {
    header("HTTP/1.0 500 Extension xmlrpc not loaded");
    die("Extension xmlrpc not loaded");
@@ -60,7 +56,7 @@ if (isset($_GET['session'])) {
    $session->setSession($_GET['session']);
 }
 
-include (GLPI_ROOT . "/inc/includes.php");
+include ("../../inc/includes.php");
 
 Plugin::load('webservices', true);
 
@@ -82,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 // Fred : end ...
 
-if (!array_key_exists('CONTENT_TYPE', $_SERVER) || strpos($_SERVER['CONTENT_TYPE'], 'text/xml') === false) {
+if (!array_key_exists('CONTENT_TYPE', $_SERVER)
+      || (strpos($_SERVER['CONTENT_TYPE'], 'text/xml') === false)) {
    header("HTTP/1.0 500 Bad content type");
    die("Bad content type");
 }
@@ -92,8 +89,10 @@ if (!isset($GLOBALS["HTTP_RAW_POST_DATA"]) || empty($GLOBALS["HTTP_RAW_POST_DATA
 }
 
 $method    = "";
-$allparams = xmlrpc_decode_request($GLOBALS["HTTP_RAW_POST_DATA"],$method,'UTF-8');
-
+$allparams = "";
+if (isset($GLOBALS["HTTP_RAW_POST_DATA"])) {
+   $allparams = xmlrpc_decode_request($GLOBALS["HTTP_RAW_POST_DATA"],$method,'UTF-8');
+}
 if (empty($method) || !is_array($allparams)) {
    header("HTTP/1.0 500 Bad content");
 }
@@ -116,6 +115,6 @@ if ($iso) {
    echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'ISO-8859-1'));
 } else {
    // request without method is a response ;)
-   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'UTF-8'));
+   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'UTF-8', 'escaping'=>'markup'));
 }
 ?>

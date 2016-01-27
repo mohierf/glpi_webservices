@@ -79,6 +79,8 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       $identificat = new Auth();
 
       if ($identificat->Login($params['login_name'], $params['login_password'], true)) {
+         // Fred - Test d'optimisation des sessions ...
+         session_write_close();
          return (array('id'        => Session::getLoginUserID(),
                        'name'      => $_SESSION['glpiname'],
                        'realname'  => $_SESSION['glpirealname'],
