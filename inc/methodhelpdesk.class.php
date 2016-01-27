@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodhelpdesk.class.php 396 2014-11-23 18:46:25Z yllen $
+ * @version $Id: methodhelpdesk.class.php 412 2015-10-01 13:37:30Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2015 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -749,6 +749,13 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['type'] = $params['type'];
       }
       $ticket = new Ticket();
+      if (!$ticket->canCreate()) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+      }
+      if (!$ticket->canAssign()) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+         $data['_groups_id_assign'] = 0;
+      }
       if ($newID = $ticket->add($data)) {
          return self::methodGetTicket(array('ticket' => $newID), $protocol);
       }
@@ -1372,6 +1379,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       if (isset($params['help'])) {
          return array('ticket'  => 'integer,mandatory',
+                      'name'    => 'string,mandatory',
                       'uri'     => 'string,optional',
                       'base64'  => 'string,optional',
                       'content' => 'string,optional',
@@ -1395,6 +1403,14 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'ticket');
       }
 
+      if (!isset($params['name'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'name');
+      }
+
+      if (!Document::isValidDoc($params['name'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'name');
+      }
+
       if (!$ticket->can($params['ticket'], READ)) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
@@ -1407,14 +1423,9 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '', 'access denied');
       }
 
-      if (isset($params['name']) && !empty($params['name'])) {
-         $document_name = addslashes($params['name']);
-      } else {
-         $document_name = addslashes(sprintf(__('%1$s %2$s'), _x('phone', 'Number'),
-                                             $ticket->fields['id']));
-      }
-      $filename = tempnam(GLPI_TMP_DIR, 'PWS');
-      $response = parent::uploadDocument($params, $protocol, $filename, $document_name);
+      $filepath = GLPI_TMP_DIR."/".$params['name'];
+      file_put_contents($filepath, null);
+      $response = parent::uploadDocument($params, $protocol, $filepath);
       //An error occured during document upload
       if (parent::isError($protocol, $response)) {
          return $response;
@@ -1422,7 +1433,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       $doc          = new Document();
       $documentitem = new Document_Item();
-      $docid        = $doc->getFromDBbyContent($ticket->fields["entities_id"], $filename);
+      $docid        = $doc->getFromDBbyContent($ticket->fields["entities_id"], $filepath);
       if ($docid) {
          $input = array('itemtype'     => $ticket->getType(),
                         'items_id'     => $ticket->getID(),
@@ -1440,6 +1451,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                         'tickets_id'            => $ticket->getID(),
                         'entities_id'           => $ticket->getEntityID(),
                         'is_recursive'          => $ticket->isRecursive(),
+                        '_filename'             => Array(basename($params['name'])),
                         'documentcategories_id' => $CFG_GLPI["documentcategories_id_forticket"]);
          $new = $doc->add($input);
       }

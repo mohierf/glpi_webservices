@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodcommon.class.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: methodcommon.class.php 412 2015-10-01 13:37:30Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2015 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -363,56 +363,34 @@ class PluginWebservicesMethodCommon {
     * @param $protocol        the protocol used for remote call
     * @param $filename        name of the file on the filesystem
     * @param $document_name   name of the document into glpi
+    * @param $filepath        path of the file on the filesystem
     *
     * @return true or an Error
    **/
-   static function uploadDocument($params, $protocol, $filename, $document_name) {
+   static function uploadDocument($params, $protocol, $filename, $document_name, $filepath) {
 
       if (!isset($params['uri']) && !isset($params['base64'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '','uri or base64');
       }
-
-      $_FILES['filename']['tmp_name'] = $filename;
 
       if (isset($params['uri'])) {
          $content = @file_get_contents($params['uri']);
          if (!$content) {
             return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', $params['uri']);
          }
-         $_FILES['filename']['name'] = basename($params['uri']);
 
       } else if (isset($params['base64'])) {
          $content = base64_decode($params['base64']);
          if (!$content) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', $params['base64']);
          }
-         $_FILES['filename']['name'] = basename($document_name);
       }
 
-      $size = @file_put_contents($filename, $content);
+      $size = file_put_contents($filepath, $content);
       if (!$size) {
          return self::Error($protocol, WEBSERVICES_ERROR_FAILED, '', $filename);
       }
-      $_FILES['filename']['size'] = $size;
 
-      if (function_exists('finfo_open') && $finfo = finfo_open(FILEINFO_MIME)) {
-         $_FILES['filename']['type'] = finfo_file($finfo, $filename);
-         finfo_close($finfo);
-      } else if (function_exists('mime_content_type')) {
-         $_FILES['filename']['type'] = mime_content_type($filename);
-      }
-
-      // Hack for old libmagic
-      if (isset($_FILES['filename']['type'])) {
-         if ($_FILES['filename']['type']=='application/msword'
-             && preg_match("/\.xls$/i", $_FILES['filename']['name'])) {
-            $_FILES['filename']['type'] = 'application/vnd.ms-office';
-
-         } else if ($_FILES['filename']['type']=='APPLICATION/APPLEFILE'
-                    && preg_match("/\.pdf$/i", $_FILES['filename']['name'])) {
-            $_FILES['filename']['type'] = 'application/pdf';
-         }
-      }
       return true;
    }
 
@@ -752,7 +730,7 @@ class PluginWebservicesMethodCommon {
       $query = "SELECT `glpi_profilerights`.`rights`
                 FROM `glpi_profilerights`
                 LEFT JOIN `glpi_profiles`
-                   ON (`glpi_profiles`.`id` = `glpi_profilerights`.`profiles_id`
+                   ON (`glpi_profiles`.`id` = `glpi_profilerights`.`profiles_id`)
                 INNER JOIN `glpi_profiles_users`
                    ON (`glpi_profiles`.`id` = `glpi_profiles_users`.`profiles_id`)
                 WHERE `glpi_profiles_users`.`users_id` = '$user'

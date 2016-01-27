@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: setup.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: setup.php 406 2015-09-06 16:04:39Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -38,8 +38,9 @@ function plugin_init_webservices() {
 
    $PLUGIN_HOOKS['csrf_compliant']['webservices'] = true;
 
-   $PLUGIN_HOOKS["menu_toadd"]['webservices'] = array('config'  => 'PluginWebservicesClient');
-
+   if (Session::haveright("config", UPDATE)) {
+      $PLUGIN_HOOKS["menu_toadd"]['webservices'] = array('config'  => 'PluginWebservicesClient');
+   }
    $PLUGIN_HOOKS['webservices']['webservices'] = 'plugin_webservices_registerMethods';
 
    //Store objects that can be retrieved when querying another object
@@ -134,7 +135,7 @@ function plugin_init_webservices() {
 function plugin_version_webservices() {
 
    return array('name'           => __('Web Services', 'webservices'),
-                'version'        => '1.5.0-fork',
+                'version'        => '1.5.1-fork',
                 'author'         => 'F. Mohier, from Remi Collet, Nelly Mahu-Lasson',
                 'license'        => 'GPLv2+',
                 'homepage'       => 'https://forge.indepnet.net/projects/webservices',

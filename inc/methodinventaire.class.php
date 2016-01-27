@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodinventaire.class.php 399 2015-01-09 09:26:22Z tsmr $
+ * @version $Id: methodinventaire.class.php 407 2015-09-06 16:11:43Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -576,7 +576,8 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             if (!in_array($key, $already_used)
                 && isset($params[$key])
                 && $params[$key]
-                && $item->getField($option['linkfield']) != NOT_AVAILABLE) {
+                && (($item->getField($option['linkfield']) != NOT_AVAILABLE)
+                    || ($item->getField($option['field']) != NOT_AVAILABLE))) {
 
                if (getTableNameForForeignKeyField($key)) {
                   $where .= " AND `$table`.`$key`='" . Toolbox::addslashes_deep($params[$key]) . "'";

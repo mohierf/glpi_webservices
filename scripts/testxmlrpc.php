@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: testxmlrpc.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: testxmlrpc.php 408 2015-09-16 13:19:06Z remi $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -55,6 +55,7 @@ if (isset($args['help']) && !isset($args['method'])) {
 
    echo "\thelp     : display this screen\n";
    echo "\thost     : server name or IP, default : localhost\n";
+   echo "\thttps    : use https (instead of http)\n";
    echo "\turl      : XML-RPC plugin URL, default : $url\n";
    echo "\tusername : User name for security check (optionnal)\n";
    echo "\tpassword : User password (optionnal)\n";
@@ -67,6 +68,13 @@ if (isset($args['help']) && !isset($args['method'])) {
 if (isset($args['url'])) {
    $url = $args['url'];
    unset($args['url']);
+}
+
+if (isset($args['https'])) {
+   $proto = 'https';
+   unset($args['https']);
+} else {
+   $proto = 'http';
 }
 
 if (isset($args['host'])) {
@@ -108,14 +116,14 @@ foreach($args as $key => $value) {
       $args[$key] = json_decode(substr($value, 5), true);
    }
 }
-echo "+ Calling '$method' on http://$host/$url\n";
+echo "+ Calling '$method' on $proto://$host/$url\n";
 
 $request = xmlrpc_encode_request($method, $args);
 $context = stream_context_create(array('http' => array('method'  => "POST",
                                                        'header'  => $header,
                                                        'content' => $request)));
 
-$file = file_get_contents("http://$host/$url", false, $context);
+$file = file_get_contents("$proto://$host/$url", false, $context);
 if (!$file) {
    die("+ No response\n");
 }

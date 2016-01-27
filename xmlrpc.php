@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: xmlrpc.php 399 2015-01-09 09:26:22Z tsmr $
+ * @version $Id: xmlrpc.php 400 2015-05-23 18:34:43Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -102,9 +102,9 @@ header("Content-type: text/xml");
 
 if ($iso) {
    decodeFromUtf8Array($resp);
-   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'iso-8859-1'));
+   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'ISO-8859-1'));
 } else {
    // request without method is a response ;)
-   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'utf-8', 'escaping'=>'markup'));
+   echo xmlrpc_encode_request(NULL,$resp,array('encoding'=>'UTF-8', 'escaping'=>'markup'));
 }
 ?>
