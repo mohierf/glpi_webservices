@@ -367,6 +367,10 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       global $DB, $CFG_GLPI;
 
+      if (!Session::getLoginUserID()) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
+      }
+
       $rows = array();
       $row = array();
       $row['id']=-1;
