@@ -326,9 +326,9 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    }
 
 	/*
-   * WS getHelpdeskConfiguration : 
+   * WS getHelpdeskConfiguration :
    * - debug : mode debug
-   *   Renvoie une ligne de résultat contenant les paramètres et la requête postée sur la base. 
+   *   Renvoie une ligne de résultat contenant les paramètres et la requête postée sur la base.
    *   Cette ligne contient un id = -1 pour permettre de la filtrer dans les autres lignes de résultat
    *   Défaut: false
    *
@@ -337,7 +337,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    *   exemple: 11 ou 11,12,13
    *   Défaut: les entités autorisées du compte utilisateur
    *
-   * WS output : 
+   * WS output :
       {
          "categories":[
             {"entity_id":"0","entity_name":"Entit\u00e9 racine","entity_completename":"Entit\u00e9 racine","id":"29","name":"D\u00e9m\u00e9nagement","completename":"D\u00e9m\u00e9nagement","comment":"","parent_id":"0","is_incident":"0","id_template_incident":"0","is_request":"1","id_template_request":"1"}
@@ -370,40 +370,28 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $rows = array();
       $row = array();
       $row['id']=-1;
-      
+
       $debug = false;
       if (isset($params['debug'])) {
          $debug=true;
-        $row['ws']="kiosks.getHelpdeskConfiguration";
+         $row['ws']="glpi.getHelpdeskConfiguration";
       }
-      
+
       $where = $join = $fields = '';
-      
-      // Entities
-      if (isset($params['entitiesList'])) {
-         $row['entitiesList']=$params['entitiesList'];
-         if (!Session::haveAccessToAllOfEntities($params['entitiesList'])) {
-            return (array( 'error' => "Access to all required entities is not allowed!" ));
-         }
-         $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', $params['entitiesList'], true) .
-                     $where;
-      } else {
-         $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true) .
-                     $where;
-      }
+
+      $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true) .
+                  $where;
+      $row['where']=$where;
 
       // Order
       $order = "entity_name ASC, completename ASC";
-      if (isset($params['order'])) {
-         $order = $params['order'];
-      }
       $row['order']=$order;
 
       $join .= "
          LEFT JOIN `glpi_entities`
             ON `glpi_itilcategories`.`entities_id` = `glpi_entities`.`id`
          ";
-      
+
       $query = "
          SELECT
             `glpi_entities`.`id` AS entity_id,
@@ -425,7 +413,9 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $row['query'] = $query;
 
       if ($debug) $rows[] = $row;
-      
+
+      $rows['types'] = array ("request", "incident");
+
       $result = $DB->query($query);
       while ($data=$DB->fetch_array($result)) {
          $row = array();
@@ -438,12 +428,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                foreach ($rows['templates'] as $index => $template) {
                   if ($template['id'] == $value) $exists=true;
                }
-               
+
                if (! $exists) {
                   // Find ticket template if available ...
                   $rowTemplate = array();
                   $track = new Ticket();
-                  // $tt = $track->getTicketTemplateToUse(0, Ticket::DEMAND_TYPE, $value, 0);
                   $tt = $track->getTicketTemplateToUse($value);
 
                   if (isset($tt->predefined) && count($tt->predefined)) {
@@ -461,12 +450,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                foreach ($rows['templates'] as $index => $template) {
                   if ($template['id'] == $value) $exists=true;
                }
-               
+
                if (! $exists) {
                   // Find ticket template if available ...
                   $rowTemplate = array();
                   $track = new Ticket();
-                  // $tt = $track->getTicketTemplateToUse(0, Ticket::INCIDENT_TYPE, $value, 0);
                   $tt = $track->getTicketTemplateToUse($value);
 
                   if (isset($tt->predefined) && count($tt->predefined)) {
@@ -480,7 +468,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                }
             }
          }
-         
+
          $rows['categories'][] = $row;
       }
 
@@ -1476,7 +1464,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
     *
     * @return array of hashtable
     *
-    * With counters option, returns : 
+    * With counters option, returns :
     {
       "general":{"tickets":{"value":3,"counter":"tickets"},"sla_ok":{"value":3,"counter":"SLA Ok"}},
       "status":{"status_2":{"value":2,"counter":"En cours (Attribu\u00e9)"},"status_5":{"value":1,"counter":"R\u00e9solu"}},
@@ -1884,8 +1872,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                      $counters[$counter_type]['unsolved']['counter'] = 'Unsolved';
                   }
                }
-               
-               
+
+
                // Status counters
                $counter_type = 'status';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1894,7 +1882,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Ticket::getStatus($data['status']));
                }
-               
+
                // Urgency counters
                $counter_type = 'urgency';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1903,7 +1891,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Ticket::getUrgencyName($data['urgency']);
                }
-               
+
                // Impact counters
                $counter_type = 'impact';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1912,7 +1900,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Ticket::getImpactName($data['impact']);
                }
-               
+
                // Category counters
                $counter_type = 'itilcategories_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1921,7 +1909,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Dropdown::getDropdownName('glpi_itilcategories', $data['itilcategories_id']));
                }
-               
+
                // Request type counters
                $counter_type = 'requesttypes_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1930,7 +1918,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Dropdown::getDropdownName('glpi_requesttypes', $data['requesttypes_id']));
                }
-               
+
                // Solution type counters
                $counter_type = 'solutiontypes_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1939,7 +1927,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Dropdown::getDropdownName('glpi_solutiontypes', $data['solutiontypes_id']));
                }
-               
+
                // SLA counters
                $counter_type = 'slas_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1948,7 +1936,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Dropdown::getDropdownName('glpi_slas', $data['slas_id']));
                }
-               
+
                // SLA level counters
                $counter_type = 'slalevels_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
@@ -1957,7 +1945,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['value'] = 1;
                   $counters[$counter_type][$counter_type.'_'.$data[$counter_type]]['counter'] = Html::clean(Dropdown::getDropdownName('glpi_slalevels', $data['slalevels_id']));
                }
-               
+
                // Entities counters
                $counter_type = 'entities_id';
                if (isset($counters[$counter_type][$counter_type.'_'.$data[$counter_type]])) {
