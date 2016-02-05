@@ -329,13 +329,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    * WS getHelpdeskConfiguration :
    * - debug : mode debug
    *   Renvoie une ligne de résultat contenant les paramètres et la requête postée sur la base.
-   *   Cette ligne contient un id = -1 pour permettre de la filtrer dans les autres lignes de résultat
    *   Défaut: false
-   *
-   * - entitiesList : entité ou liste d'entités
-   *   Filtre les résultats pour l'entité (ou les entités) demandée. Le login utilisateur utilisé doit avoir accès aux entités demandées sinon le WS retourne une erreur.
-   *   exemple: 11 ou 11,12,13
-   *   Défaut: les entités autorisées du compte utilisateur
    *
    * WS output :
       {
@@ -361,11 +355,12 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       }
    */
    static function methodGetHelpdeskConfiguration($params, $protocol) {
-      if (!Session::getLoginUserID()) {
-         return (array( 'error' => "User is not authenticated!" ));
-      }
-
       global $DB, $CFG_GLPI;
+
+      if (isset($params['help'])) {
+         return array('debug'                   => 'bool,optional',
+                      'help'                    => 'bool,optional');
+      }
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
@@ -381,20 +376,8 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $row['ws']="glpi.getHelpdeskConfiguration";
       }
 
-      $where = $join = $fields = '';
-
-      $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true) .
-                  $where;
+      $where = getEntitiesRestrictRequest("WHERE", "glpi_itilcategories", '', '', true);
       $row['where']=$where;
-
-      // Order
-      $order = "entity_name ASC, completename ASC";
-      $row['order']=$order;
-
-      $join .= "
-         LEFT JOIN `glpi_entities`
-            ON `glpi_itilcategories`.`entities_id` = `glpi_entities`.`id`
-         ";
 
       $query = "
          SELECT
@@ -410,9 +393,10 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             `glpi_itilcategories`.`is_request` AS is_request,
             `glpi_itilcategories`.`tickettemplates_id_demand` AS id_template_request
          FROM `glpi_itilcategories`
-         $join
+         LEFT JOIN `glpi_entities`
+            ON `glpi_itilcategories`.`entities_id` = `glpi_entities`.`id`
          $where
-         ORDER BY $order;
+         ORDER BY completename ASC;
       ";
       $row['query'] = $query;
 
@@ -504,12 +488,13 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
                       'observer'                => 'integer,optional',
                       'group'                   => 'integer,optional',
                       'groupassign'             => 'integer,optional',
+                      'userassign'              => 'integer,optional',
                       'date'                    => 'datetime,optional',
                       'type'                    => 'integer,optional',
-                      'category'                => 'integer,optional',
                       'itemtype'                => 'string,optional',
                       'item'                    => 'integer,optional',
                       'source'                  => 'string,optional',
+                      'template'                => 'string,optional',
                       'user_email'              => 'string,optional',
                       'use_email_notification'  => 'bool,optional',
                       'help'                    => 'bool,optional');
@@ -526,7 +511,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       // Source of the ticket, dynamically created
       if (isset($params['source'])) {
-         if (empty($params['content'])) {
+         if (empty($params['source'])) {
             return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'source');
          }
          $source = Dropdown::importExternal('RequestType', $params['source']);
@@ -553,7 +538,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['name'] = addslashes(Toolbox::clean_cross_side_scripting_deep($params['title']));
       }
 
-      // entity : optionnal, default = current one
+      // entity : optional, default = current one
       if (!isset($params['entity'])) {
          $data['entities_id'] = $_SESSION['glpiactive_entity'];
       } else {
@@ -564,7 +549,39 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['entities_id'] = $params['entity'];
       }
 
-      // user (author) : optionnal,  default = current one
+      // Template : use template predefined fields
+      if (isset($params['template']) && $params['template']) {
+         // Type must be defined ...
+         if (isset($params['type'])) {
+            $types = Ticket::getTypes();
+            if (!is_numeric($params['type']) || !isset($types[$params['type']])) {
+               return (array( 'error' => "Type is not valid!" ));
+            }
+         } else {
+            return (array( 'error' => "Type for template is not defined!" ));
+         }
+         // Category must be defined ...
+         if (isset($params['category'])) {
+            if (!is_numeric($params['category']) || ($params['category'] < 1)) {
+               return (array( 'error' => "Category is not valid!" ));
+            }
+         } else {
+            return (array( 'error' => "Category for template is not defined!" ));
+         }
+
+         // Find ticket template if available ...
+         $track = new Ticket();
+         $tt = $track->getTicketTemplateToUse(0, $params['type'], $params['category'], $data['entities_id']);
+
+         if (isset($tt->predefined) && count($tt->predefined)) {
+            foreach ($tt->predefined as $predeffield => $predefvalue) {
+               // Load template data
+               $data[$predeffield] = $predefvalue;
+            }
+         }
+      }
+
+      // user (author) : optional,  default = current one
       if (isset($params['user'])) {
          if (!is_numeric($params['user'])) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'user');
@@ -641,7 +658,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
       }
 
-      // group (author) : optionnal,  default = none
+      // group (author) : optional,  default = none
       if (!isset($params['group'])) {
          $data['_groups_id_requester'] = 0;
       } else {
@@ -651,7 +668,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['_groups_id_requester'] = $params['group'];
       }
 
-      // groupassign (technicians group) : optionnal,  default = none
+      // groupassign (technicians group) : optional,  default = none
       if (!isset($params['groupassign'])) {
          $data['_groups_id_assign'] = 0;
       } else {
@@ -659,6 +676,14 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'groupassign');
          }
          $data['_groups_id_assign'] = $params['groupassign'];
+      }
+
+      // userassign (technician) : optional,  default = none
+      if (isset($params['userassign'])) {
+         if (!is_numeric($params['userassign'])) {
+            return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'userassign');
+         }
+         $data['_users_id_assign'] = $params['userassign'];
       }
 
       // date (open) : optional, default set by add method
@@ -701,12 +726,17 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['items_id'] = $params['item'];
       }
 
+      // Location
+      if (isset($params['location'])) {
+         $data['locations_id'] = $params['location'];
+      }
+
       // Hack for compatibility with previous version
       if (isset($params['urgence'])) {
          $params['urgency'] = $params['urgence'];
       }
 
-      // urgence (priority while not exists) : optionnal,  default = 3
+      // urgence (priority while not exists) : optional,  default = 3
       if (!isset($params['urgency'])) {
          $data['urgency'] = 3;
 
@@ -733,7 +763,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
       }
 
-      // category : optionnal
+      // category : optional
       if (isset($params['category'])) {
          if (!is_numeric($params['category']) || ($params['category'] < 1)) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'category');
@@ -741,7 +771,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          $data['itilcategories_id'] = $params['category'];
       }
 
-      // type : optionnal (default = INCIDENT)
+      // type : optional (default = INCIDENT)
       if (isset($params['type'])) {
          $types = Ticket::getTypes();
          if (!is_numeric($params['type']) || !isset($types[$params['type']])) {
@@ -1202,31 +1232,19 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
    static function methodAddTicketFollowup($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array('ticket'  => 'integer,mandatory',
-                      'content' => 'string,mandatory',
-                      'users_login' => 'string,optional',
-                      'close'   => 'bool,optional',
-                      'reopen'  => 'bool,optional',
-                      'source'  => 'string,optional',
-                      'private' => 'bool,optional',
-                      'help'    => 'bool,optional');
+         return array('ticket'      => 'integer,mandatory',
+                      'content'     => 'string,mandatory',
+                      'status'      => 'integer,optional',
+                      'close'       => 'bool,optional',
+                      'reopen'      => 'bool,optional',
+                      'source'      => 'string,optional',
+                      'private'     => 'bool,optional',
+                      'help'        => 'bool,optional');
       }
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
       $ticket = new Ticket();
-
-      if (isset($params['users_login']) && is_numeric($params['users_login'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
-                            'users_login should be a string');
-      }
-
-      if (isset($params['users_login']) && is_string($params['users_login'])) {
-         $user = new User();
-         if(!$users_id = $user->getIdByName($params['users_login']))
-            return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
-                               'unable to get users_id with the users_login');
-      }
 
       if (!isset($params['ticket'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'ticket');
@@ -1234,6 +1252,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       if (!is_numeric($params['ticket'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'ticket');
+      }
+
+      // Get ticket from database
+      if (!$ticket->getFromDB($params['ticket'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
       }
 
       if (!$ticket->can($params['ticket'],'r')) {
@@ -1244,25 +1267,13 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
-      if (in_array($ticket->fields["status"], $ticket->getSolvedStatusArray())
-            && !$ticket->canApprove()) {// Logged user not allowed
-         if(isset($users_id)) {// If we get the users id
-            $approbationSolution = self::checkApprobationSolution($users_id, $ticket);
-            if(!$approbationSolution) {
-               return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
-            }
-         } else {
-            return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
-         }
-      }
-
       if (!isset($params['content'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'content');
       }
 
-      // Source of the ticket, dynamically created
+      // Source of the ticket follow-up, dynamically created
       if (isset($params['source'])) {
-         if (empty($params['content'])) {
+         if (empty($params['source'])) {
             return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'source');
          }
          $source = Dropdown::importExternal('RequestType', $params['source']);
@@ -1273,15 +1284,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $private = (isset($params['private']) && $params['private'] ? 1 : 0);
 
       $followup = new TicketFollowup();
-      $user = 0;
-      if (isset($users_id)) {
-         $user = $users_id;
-      }
       $data = array('tickets_id' => $params['ticket'],
                     'requesttypes_id'
                                  => $source,
                     'is_private' => $private,
-                    'users_id'   => $user,
+                    'users_id'   => Session::getLoginUserID(),
                     'content'    => addslashes(Toolbox::clean_cross_side_scripting_deep($params["content"])));
 
       if (isset($params['close'])) {
@@ -1324,6 +1331,22 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
                             'cannot add to a closed ticket');
       }
+
+/*
+      // Ticket status change request
+      if (isset($params['status'])) {
+         if (!is_numeric($params['status'])) {
+            return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'status');
+         }
+         if ($params['status'] != $ticket->fields["status"]) {
+            // Ticket status change request
+            if (isset($params['status']) && !is_numeric($params['status'])) {
+               return self::methodSetTicketStatus(array('ticket' => $params['ticket']), $protocol);
+            }
+            return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+         }
+      }
+*/
 
       if ($followup->add($data)) {
          return self::methodGetTicket(array('ticket' => $params['ticket']), $protocol);
@@ -1676,9 +1699,9 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
       // Status
       if (isset($params['status'])) {
-         if (!in_array($params['status'], Ticket::getAllowedStatusArray(true))) {
-            return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'status');
-         }
+         // if (!in_array($params['status'], Ticket::getAllowedStatusArray(true))) {
+            // return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'status');
+         // }
          switch ($params['status']) {
             case 'all':
                // No restriction
@@ -2171,6 +2194,62 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
 
 
    /**
+    * Status of a ticket for an authenticated user
+    *
+    * @param $params    array of options (ticket, id2name)
+    * @param $protocol        the communication protocol used
+    *
+    * @return array of hashtable as glpi.getTicket
+    **/
+   static function methodSetTicketStatus($params, $protocol) {
+      global $DB, $CFG_GLPI;
+
+      if (isset($params['help'])) {
+         return array('ticket'       => 'integer,mandatory',
+                      'id2name'      => 'bool,optional',
+                      'status'         => 'integer,optional',
+                      'help'         => 'bool,optional');
+      }
+
+      if (!Session::getLoginUserID()) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
+      }
+
+      $ticket = new Ticket();
+
+      if (!isset($params['ticket'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'ticket');
+      }
+
+      if (!isset($params['status'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'status');
+      }
+
+      if (isset($params['status']) && !is_numeric($params['status'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
+                            'status=' . $params['status']);
+      }
+
+      if (!$ticket->can($params['ticket'], 'r')) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+      }
+
+      if (!$ticket->getFromDB($params['ticket'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
+      }
+
+      $input = array('id'       => $ticket->getField('id'),
+                     'status'   => $params['status']);
+
+      if ($ticket->update($input)) {
+         unset($params['solution'], $params['type']);
+         return self::methodGetTicket($params, $protocol);
+      }
+      return self::Error($protocol, WEBSERVICES_ERROR_FAILED, '',self::getDisplayError());
+   }
+
+
+   /**
     * Solution of a ticket for an authenticated user
     *
     * @param $params    array of options (ticket, id2name)
@@ -2178,7 +2257,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
     *
     * @return array of hashtable as glpi.getTicket
     **/
-   static function methodsetTicketSolution($params, $protocol) {
+   static function methodSetTicketSolution($params, $protocol) {
       global $DB, $CFG_GLPI;
 
       if (isset($params['help'])) {
@@ -2209,11 +2288,11 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       }
 
       if (!$ticket->can($params['ticket'], 'r')) {
-         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
       if (!$ticket->getFromDB($params['ticket'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'solution');
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND, '', 'ticket');
       }
 
       $input = array('id'       => $ticket->getField('id'),
@@ -2291,7 +2370,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
       $user = array('tickets_id'   => $params['ticket'],
                     'type'         => CommonITILActor::ASSIGN);
 
-      // technician : optionnal,  default = none
+      // technician : optional,  default = none
       if (isset($params['user'])) {
          if (!is_numeric($params['user'])) {
             return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', 'user');
@@ -2331,7 +2410,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
       }
 
-      // group (technicians group) : optionnal,  default = none
+      // group (technicians group) : optional,  default = none
       $group_ticket = new Group_Ticket();
       $group = array('tickets_id' => $params['ticket'],
                      'type'       => CommonITILActor::ASSIGN);
@@ -2355,7 +2434,7 @@ class PluginWebservicesMethodHelpdesk extends PluginWebservicesMethodCommon {
          }
       }
 
-      // supplier to assign : optionnal,  default = none
+      // supplier to assign : optional,  default = none
       $supplier_ticket = new Supplier_Ticket();
       $supplier = array('tickets_id' => $params['ticket'],
                         'type'       => CommonITILActor::ASSIGN);
