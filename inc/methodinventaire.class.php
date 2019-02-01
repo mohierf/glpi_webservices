@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodinventaire.class.php 407 2015-09-06 16:11:43Z yllen $
+ * @version $Id: methodinventaire.class.php 465 2018-11-29 14:50:19Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -45,25 +45,29 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
     * for an authenticated user
     *
     * @param $params    array of options
-    * @param $protocol        the commonication protocol used
+    * @param $protocol  string, the communication protocol used
+    *
+    * @return array response
    **/
    static function methodListObjects($params, $protocol) {
-      global $DB, $CFG_GLPI;
+      global $DB;
 
       if (isset($params['help'])) {
-         return array('start'         => 'integer,optional',
-                      'limit'         => 'integer,optional',
-                      'name'          => 'string,optional',
-                      'serial'        => 'string,optional',
-                      'otherserial'   => 'string,optional',
-                      'locations_id'  => 'integer,optional',
-                      'location_name' => 'string,optional',
-                      'room'          => 'string (Location only)',
-                      'building'      => 'string (Location only)',
-                      'itemtype'      => 'string,mandatory',
-                      'show_label'    => 'bool, optional (0 default)',
-                      'help'          => 'bool,optional');
+         return ['start'         => 'integer,optional',
+                 'limit'         => 'integer,optional',
+                 'name'          => 'string,optional',
+                 'serial'        => 'string,optional',
+                 'otherserial'   => 'string,optional',
+                 'locations_id'  => 'integer,optional',
+                 'location_name' => 'string,optional',
+                 'room'          => 'string (Location only)',
+                 'building'      => 'string (Location only)',
+                 'itemtype'      => 'string,mandatory',
+                 'show_label'    => 'bool, optional (0 default)',
+                 'help'          => 'bool,optional'];
       }
+
+      $dbu = new DbUtils();
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
@@ -74,7 +78,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
-      $resp  = array();
+//      $resp  = [];
       $start = 0;
       $limit = $_SESSION['glpilist_limit'];
       if (isset($params['limit']) && is_numeric($params['limit'])) {
@@ -83,7 +87,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       if (isset($params['start']) && is_numeric($params['start'])) {
          $start = $params['start'];
       }
-      foreach (array('show_label','show_name') as $key) {
+      foreach (['show_label','show_name'] as $key) {
           $params[$key] = (isset($params[$key])?$params[$key]:false);
       }
 
@@ -95,11 +99,12 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Fields to return to the client when search search is performed
-      $params['return_fields'][$params['itemtype']] = array('id', 'interface', 'is_default',
-                                                            'locations_id',  'name', 'otherserial',
-                                                            'serial');
+      $params['return_fields'][$params['itemtype']] = ['id', 'interface', 'is_default',
+                                                       'locations_id',  'name', 'otherserial',
+                                                       'serial'];
 
-      $output = array();
+      $output = [];
+      /* @var $item CommonDBTM */
       $item   = new $params['itemtype'];
       if (!$item->canView()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '');
@@ -108,7 +113,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       //Restrict request
       if ($item->isEntityAssign()) {
-         $where = getEntitiesRestrictRequest('WHERE', $table);
+         $where = $dbu->getEntitiesRestrictRequest('WHERE', $table);
       } else {
          $where = "WHERE 1 ";
       }
@@ -119,13 +124,13 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          $where .= " AND `$table`.`is_template` = '0'";
       }
       $left_join = "";
-      if ($item->getField('entities_id') != NOT_AVAILABLE) {
+      if ($item->getField('entities_id') !== NOT_AVAILABLE) {
          $left_join = " LEFT JOIN `glpi_entities`
                            ON (`$table`.`entities_id` = `glpi_entities`.`id`) ";
 
-         $already_joined = array();
+         $already_joined = [];
          $left_join.= self::listInventoryObjectsRequestLeftJoins($params, $item, $table, $already_joined).
-                      getEntitiesRestrictRequest(" AND ", $table);
+                      $dbu->getEntitiesRestrictRequest(" AND ", $table);
 
          $where = self::listInventoryObjectsRequestParameters($params, $item, $table, $where);
       }
@@ -136,10 +141,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                 LIMIT $start,$limit";
 
       foreach ($DB->request($query) as $data) {
-         $tmp      = array();
-         $toformat = array('table'         => $table, 'data'  => $data,
-                           'searchOptions' => Search::getOptions($params['itemtype']),
-                           'options'       => $params);
+         $tmp      = [];
+         $toformat = ['table'         => $table, 'data'  => $data,
+                      'searchOptions' => Search::getOptions($params['itemtype']),
+                      'options'       => $params];
          parent::formatDataForOutput($toformat, $tmp);
          $output[] = $tmp;
       }
@@ -151,16 +156,18 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
     * Get an object for an authenticated user
     *
     * @param $params    array of options
-    * @param $protocol        the commonication protocol used
+    * @param $protocol  string, the communication protocol used
+    *
+    * @return array response
    **/
    static function methodGetObject($params, $protocol) {
-      global $CFG_GLPI,$WEBSERVICE_LINKED_OBJECTS;
+      global $WEBSERVICE_LINKED_OBJECTS;
 
       if (isset($params['help'])) {
-         $options =  array('id'         => 'integer',
-                           'help'       => 'bool,optional',
-                           'show_label' => 'bool, optional',
-                           'show_name'  => 'bool, optional');
+         $options =  ['id'         => 'integer',
+                      'help'       => 'bool,optional',
+                      'show_label' => 'bool, optional',
+                      'show_name'  => 'bool, optional'];
           foreach ($WEBSERVICE_LINKED_OBJECTS as $option => $value) {
             $options[$option] = $value['help'];
           }
@@ -173,14 +180,14 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       $p['itemtype']      = '';
       $p['id']            = false;
-      $p['return_fields'] = array();
+      $p['return_fields'] = [];
       $p['show_label']    = $p['show_name'] = false;
       foreach ($params as $key => $value) {
-         $p[$key]         = $value;
+         $p[$key] = $value;
       }
 
       //Check mandatory parameters
-      foreach (array('itemtype','id') as $mandatory_field) {
+      foreach (['itemtype', 'id'] as $mandatory_field) {
          if (!isset($p[$mandatory_field])) {
             return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '',
                                $mandatory_field);
@@ -196,6 +203,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                              'itemtype=' . $p['itemtype']);
       }
 
+      /* @var $item CommonDBTM */
       $item = new $p['itemtype'];
       if (!$item->canView()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '', $params['itemtype']);
@@ -205,20 +213,27 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
-      $output   = array();
-      $toformat = array('data'          => $item->fields,
-                        'options'       => $p,
-                        'searchOptions' => Search::getOptions($params['itemtype']),
-                        'itemtype'      => $p['itemtype']);
+      $output   = [];
+      $toformat = ['data'          => $item->fields,
+                   'options'       => $p,
+                   'searchOptions' => Search::getOptions($params['itemtype']),
+                   'itemtype'      => $p['itemtype']];
+
       parent::formatDataForOutput($toformat, $output);
       self::processLinkedItems($output, $params, $p , $protocol, $toformat);
+
+      if (isset($params['with_networkport'])) {
+         $output['NetworkPort'] = self::getItems_Networkports($protocol, $params['itemtype'],
+                                                              $params['id']);
+      }
+
       return $output;
    }
 
 
    /**
     * Process itemtypes linked to the primary type
-    * @param $output the array to be populated
+    * @param $output array to be populated
     * @param $params
     * @param $p
     * @param $protocol
@@ -242,7 +257,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             $function_name                          = "get".$option['itemtype']."s";
 
             if (method_exists($option['class'], $function_name)) {
-                $result = call_user_func(array($option['class'], $function_name), $protocol,
+                $result = call_user_func([$option['class'], $function_name], $protocol,
                                          $toformat, $p);
                 if (!empty($result)) {
                    $output[$option['itemtype']] = $result;
@@ -253,11 +268,15 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    }
 
 
-   static function getItems($protocol, $params=array(), $original_params=array()) {
+   static function getItems($protocol, $params=[], $original_params=[]) {
+
+      $dbu = new DbUtils();
 
       $flip = (isset($params['options']['flip_itemtypes'])
                   ?$params['options']['flip_itemtypes']:false);
 
+      /* @var $item CommonDBTM */
+      /* @var $source_item CommonDBTM */
       if (!$flip) {
          //Source itemtype (used to find the right _items table)
          $source_itemtype  = $params['options']['source_itemtype'];
@@ -272,7 +291,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          //Linked itemtype : items to look for in the _items table
          $source_itemtype  = $params['options']['linked_itemtype'];
          $item             = new $source_itemtype();
-         $linked_item      = new $linked_itemtype();
+//         $linked_item      = new $linked_itemtype();
          $fk               = "items_id";
       }
 
@@ -281,9 +300,9 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       $sql = "`itemtype` = '".$linked_itemtype."'
                AND `$fk` = '".Toolbox::addslashes_deep($params['data']['id'])."'";
 
-      $computer_item = array('Monitor','Printer','Phone','Peripheral');
+      $computer_item = ['Monitor','Printer','Phone','Peripheral'];
 
-      $itemtype_class = getItemtypeForTable($table);
+      $itemtype_class = $dbu->getItemtypeForTable($table);
 
       $item_class = new $itemtype_class();
 
@@ -297,14 +316,14 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          $fk_items = "items_id";
       }
 
-      $output = array();
-      foreach (getAllDatasFromTable($table,$sql) as $data) {
+      $output = [];
+      foreach ($dbu->getAllDataFromTable($table,$sql) as $data) {
 
             $item->getFromDB($data[$fk_items]);
-            $resp     = array();
-            $toformat = array('data'          => $item->fields,
-                              'searchOptions' => Search::getOptions(get_class($item)),
-                              'options'       => $params['options']);
+            $resp     = [];
+            $toformat = ['data'          => $item->fields,
+                         'searchOptions' => Search::getOptions(get_class($item)),
+                         'options'       => $params['options']];
             parent::formatDataForOutput($toformat, $resp);
             $output[$item->fields['id']] = $resp;
       }
@@ -315,31 +334,35 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Get network ports for an object for an authenticated user
     *
-    * @param $protocol                    the commonication protocol used
+    * @param $protocol  string, the communication protocol used
+    *
     * @param $params             array    parameters
     * @param $original_params    array
+    * *
+    * @return array response
     */
-   static function getNetworkports($protocol, $params=array(), $original_params=array()) {
-      global $DB;
-
+   static function getNetworkports($protocol, $params=[], $original_params=[]) {
       if (!Session::haveRight("networking", READ)) {
-         return array();
+         return [];
       }
+
+      $dbu  = new DbUtils();
+      /* @var $item CommonDBTM */
       $item = new $params['options']['itemtype']();
-      $resp = array();
+      $output = [];
 
       if ($item->can($params['data']['id'], READ)) {
          //Get all ports for the object
-         $ports = getAllDatasFromTable('glpi_networkports',
-                                       "`itemtype` = '".Toolbox::addslashes_deep($params['options']['itemtype']).
-                                          "' AND `items_id` = '".Toolbox::addslashes_deep($params['data']['id'])."'");
-         $output  = array();
-         $oneport = new NetworkPort();
+         $ports = $dbu->getAllDataFromTable('glpi_networkports',
+                                "`itemtype` = '".Toolbox::addslashes_deep($params['options']['itemtype']).
+                                "' AND `items_id` = '".Toolbox::addslashes_deep($params['data']['id'])."'");
+         $output  = [];
+//         $oneport = new NetworkPort();
          foreach ($ports as $port) {
-            $resp     = array();
-            $toformat = array('data'          => $port,
-                              'searchOptions' => Search::getOptions('NetworkPort'),
-                              'options'       => $params['options']);
+            $resp     = [];
+            $toformat = ['data'          => $port,
+                         'searchOptions' => Search::getOptions('NetworkPort'),
+                         'options'       => $params['options']];
             parent::formatDataForOutput($toformat, $resp);
 
             //Get VLANS
@@ -347,10 +370,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             $onevlan    = new Vlan();
             foreach ($port_vlan->getVlansForNetworkPort($port['id']) as $vlans_id ) {
                $onevlan->getFromDB($vlans_id);
-               $vlan        = array();
-               $params_vlan = array('data'           => $onevlan->fields,
-                                    'searchOptions' => Search::getOptions('Vlan'),
-                                    'options'       => $params['options']);
+               $vlan        = [];
+               $params_vlan = ['data'           => $onevlan->fields,
+                               'searchOptions' => Search::getOptions('Vlan'),
+                               'options'       => $params['options']];
                parent::formatDataForOutput($params_vlan, $vlan);
                $resp['Vlan'][$vlans_id] = $vlan;
             }
@@ -363,24 +386,26 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    }
 
 
-   static function getSoftwares($protocol, $params=array(), $original_params=array()) {
-      global $DB, $WEBSERVICE_LINKED_OBJECTS;
+   static function getSoftwares($protocol, $params=[], $original_params=[]) {
+      global $DB;
 
       if (!Session::haveRight("software", READ)) {
-         return array();
+         return [];
       }
-      $item = new $params['options']['itemtype']();
-      $resp = array();
-      $software = new Software();
+      $dbu        = new DbUtils();
+      /* @var $item CommonDBTM */
+      $item       = new $params['options']['itemtype']();
+      $software   = new Software();
 
       //Store softwares, versions and licenses
-      $softwares = array();
+      $softwares  = [];
 
-      if ($item->can($params['data']['id'], READ) && $software->can(-1, READ)) {
+      if ($item->can($params['data']['id'], READ)
+          && $software->can(-1, READ)) {
 
-         foreach (array('SoftwareVersion', 'SoftwareLicense') as $itemtype) {
+         foreach (['SoftwareVersion', 'SoftwareLicense'] as $itemtype) {
             $link_table = "glpi_computers_".Toolbox::addslashes_deep(strtolower($itemtype))."s";
-            $table      = getTableForItemType($itemtype);
+            $table      = $dbu->getTableForItemType($itemtype);
             $query      = "SELECT DISTINCT `gsv`.*
                            FROM `".Toolbox::addslashes_deep($link_table)."` AS gcsv,
                                 `".Toolbox::addslashes_deep($table)."` AS gsv
@@ -395,19 +420,19 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                //Software is not yet in the list
                if (!isset($softwares['Software'][$version_or_license['softwares_id']])) {
                   $software->getFromDB($version_or_license['softwares_id']);
-                  $toformat = array('data'          => $software->fields,
-                                    'searchOptions' => Search::getOptions('Software'),
-                                    'options'       => $params['options']);
-                  $tmp = array();
+                  $toformat = ['data'          => $software->fields,
+                               'searchOptions' => Search::getOptions('Software'),
+                               'options'       => $params['options']];
+                  $tmp = [];
                   parent::formatDataForOutput($toformat, $tmp);
                   $softwares['Software'][$version_or_license['softwares_id']] = $tmp;
 
                }
 
-               $toformat2 = array('data'          => $version_or_license,
-                                  'searchOptions' => Search::getOptions($itemtype),
-                                  'options'       => $params['options']);
-               $tmp = array();
+               $toformat2 = ['data'          => $version_or_license,
+                             'searchOptions' => Search::getOptions($itemtype),
+                             'options'       => $params['options']];
+               $tmp = [];
                parent::formatDataForOutput($toformat2, $tmp);
                $softwares['Software'][$version_or_license['softwares_id']][$itemtype][$version_or_license['id']]
                   = $tmp;
@@ -419,21 +444,22 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    }
 
 
-   static function getSoftwareVersions($protocol, $params=array(), $original_params=array()) {
+   static function getSoftwareVersions($protocol, $params=[], $original_params=[]) {
       return self::getSoftwareVersionsOrLicenses($protocol, $params, new SoftwareVersion());
    }
 
 
-   static function getSoftwareLicenses($protocol, $params=array(), $original_params=array()) {
+   static function getSoftwareLicenses($protocol, $params=[], $original_params=[]) {
       return self::getSoftwareVersionsOrLicenses($protocol, $params, new SoftwareLicense());
    }
 
 
-   static function getSoftwareVersionsOrLicenses($protocol, $params=array(), CommonDBTM $item) {
+
+   static function getSoftwareVersionsOrLicenses($protocol, $params, CommonDBTM $item) {
       global $DB;
 
       $software = new Software();
-      $resp     = array();
+      $resp     = [];
 
       if ($software->can($params['data']['id'], READ)) {
          $query = "SELECT `gsv`.*
@@ -445,12 +471,12 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                    GROUP BY `gsv`.`softwares_id`
                    ORDER BY `gsv`.`softwares_id` ASC";
 
-        $toformat = array('searchOptions' => Search::getOptions(get_class($item)),
-                          'options'       => $params['options']);
+        $toformat = ['searchOptions' => Search::getOptions(get_class($item)),
+                     'options'       => $params['options']];
 
          foreach ($DB->request($query) as $version_or_license) {
            $toformat['data'] = $version_or_license;
-           $result           = array();
+           $result           = [];
 
            parent::formatDataForOutput($toformat, $result);
            $resp[$version_or_license['id']] = $result;
@@ -461,57 +487,61 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    }
 
 
-   static function getMonitors($protocol, $params=array(), $original_params=array()) {
+
+   static function getMonitors($protocol, $params=[], $original_params=[]) {
       return self::getItems($protocol, $params);
    }
 
 
-   static function getPrinters($protocol, $params=array(), $original_params=array()) {
+   static function getPrinters($protocol, $params=[], $original_params=[]) {
       return self::getItems($protocol, $params);
    }
 
 
-   static function getPhones($protocol, $params=array(), $original_params=array()) {
+   static function getPhones($protocol, $params=[], $original_params=[]) {
       return self::getItems($protocol, $params);
    }
 
 
-   static function getPeripherals($protocol, $params=array(), $original_params=array()) {
+   static function getPeripherals($protocol, $params=[], $original_params=[]) {
       return self::getItems($protocol, $params);
    }
 
 
-   static function getDocuments($protocol, $params=array(), $original_params=array()) {
+   static function getDocuments($protocol, $params=[], $original_params=[]) {
 
       $params['options']['flip_itemtypes'] = true;
       return self::getItems($protocol, $params);
    }
 
 
-   static function getReservations($protocol, $params=array(), $original_params=array()) {
+   static function getReservations($protocol, $params=[], $original_params=[]) {
+
+      $dbu = new DbUtils();
 
       //Source itemtype (used to find the right _items table)
       $linked_itemtype = $params['options']['source_itemtype'];
       //Linked itemtype : items to look for in the _items table
       $source_itemtype = $params['options']['linked_itemtype'];
+      /* @var $item CommonDBTM */
       $item            = new $source_itemtype();
-      $linked_item     = new $linked_itemtype();
+//      $linked_item     = new $linked_itemtype();
       $fk = "items_id";
 
-      foreach (getAllDatasFromTable('glpi_reservationitems',
-                                    "`itemtype` = '".$linked_itemtype."'
-                                     AND `$fk` = '".$params['data']['id']."'") as $reservationitems) {
+      foreach ($dbu->getAllDataFromTable('glpi_reservationitems',
+                                          "`itemtype` = '".$linked_itemtype."'
+                                           AND `$fk` = '".$params['data']['id']."'") as $reservationitems) {
          $reservationitems_id = $reservationitems['id'];
       }
 
-      $output = array();
-      foreach (getAllDatasFromTable('glpi_reservations',
-                                    "`reservationitems_id`='".$reservationitems_id."' ") as $data) {
+      $output = [];
+      foreach ($dbu->getAllDataFromTable('glpi_reservations',
+                                          "`reservationitems_id`='".$reservationitems_id."' ") as $data) {
          $item->getFromDB($data['id']);
-         $resp     = array();
-         $toformat = array('data'          => $item->fields,
-                           'searchOptions' => Search::getOptions(get_class($item)),
-                           'options'       => $params['options']);
+         $resp     = [];
+         $toformat = ['data'          => $item->fields,
+                      'searchOptions' => Search::getOptions(get_class($item)),
+                      'options'       => $params['options']];
          PluginWebservicesMethodCommon::formatDataForOutput($toformat, $resp);
          $output[$item->fields['id']] = $resp;
       }
@@ -522,10 +552,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Check standard parameters for get requests
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array input parameters
+    * @param $protocol  string communication protocol used
     *
-    * @return 1 if checks are ok, an error if checks failed
+    * @return  integer|array response, else 1 if checks are ok, an error if checks failed
    **/
    static function checkStandardParameters($params, $protocol) {
 
@@ -556,15 +586,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Contruct parameters restriction for listInventoryObjects sql request
     *
-    * @param $params    the input parameters
+    * @param $params    array of input parameters
     * @param $item      CommonDBTM object
     * @param $table
     * @param $where
+    *
+    * @return
    **/
    static function listInventoryObjectsRequestParameters($params, CommonDBTM $item, $table,
                                                          $where="WHERE 1") {
 
-      $already_used = array();
+      $already_used = [];
 
       foreach ($params as $key => $value) {
          //Key representing the FK associated with the _name value
@@ -576,8 +608,9 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             if (!in_array($key, $already_used)
                 && isset($params[$key])
                 && $params[$key]
-                && (($item->getField($option['linkfield']) != NOT_AVAILABLE)
-                    || ($item->getField($option['field']) != NOT_AVAILABLE))) {
+                && (isset($option['linkfield'])
+                    && $item->getField($option['linkfield']) !== NOT_AVAILABLE)
+                    || ($item->getField($option['field']) !== NOT_AVAILABLE)) {
 
                if (getTableNameForForeignKeyField($key)) {
                   $where .= " AND `$table`.`$key`='" . Toolbox::addslashes_deep($params[$key]) . "'";
@@ -606,16 +639,18 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Contruct parameters restriction for listInventoryObjects sql request
     *
-    * @param $params          the input parameters
+    * @param $params          array of input parameters
     * @param $item            CommonDBTM object
     * @param $table
     * @param $already_joined
+    *
+    * @return
    **/
    static function listInventoryObjectsRequestLeftJoins($params, CommonDBTM $item, $table,
                                                         $already_joined) {
 
       $join           = "";
-      $already_joined = array();
+      $already_joined = [];
 
       foreach ($params as $key => $value) {
 
@@ -642,12 +677,15 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * List inventory objects (global search)
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array of input parameters
+    * @param $protocol  string, communication protocol used
     *
+    * @return
    **/
    static function methodListInventoryObjects($params, $protocol) {
-      global $DB, $CFG_GLPI;
+      global $DB;
+
+      $dbu = new DbUtils();
 
       //Display help for this function
       if (isset($params['help'])) {
@@ -657,7 +695,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             if (!isset($option['common'])) {
                if (isset($option['linkfield']) && $option['linkfield'] != '' ) {
 
-                  if (in_array($option['field'], array('name', 'completename'))) {
+                  if (in_array($option['field'], ['name', 'completename'])) {
                      $fields[$option['linkfield']] = 'integer,optional';
                      $name_associated              = str_replace("s_id", "_name",
                                                                  $option['linkfield']);
@@ -688,13 +726,13 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
-      $resp = array();
+      $resp = [];
 
-      $itemtypes = array();
+      $itemtypes = [];
       //If several itemtypes given, build an array
       if (isset($params['itemtype'])) {
          if (!is_array($params['itemtype'])) {
-            $itemtypes = array($params['itemtype']);
+            $itemtypes = [$params['itemtype']];
 
          } else {
             $itemtypes = $params['itemtype'];
@@ -705,6 +743,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       //Check read right on each itemtype
       foreach ($itemtypes as $itemtype) {
+         /* @var $item CommonDBTM */
          $item = new $itemtype();
          if (!$item->canView()) {
             $key = array_search($itemtype, $itemtypes);
@@ -718,7 +757,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return $resp;
       }
 
-      $resp  = array();
+      $resp  = [];
       $start = 0;
       $limit = $_SESSION['glpilist_limit'];
       if (isset($params['limit']) && is_numeric($params['limit'])) {
@@ -733,10 +772,11 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
       foreach ($itemtypes as $itemtype) {
          if (in_array($itemtype, $itemtypes)) {
+            /* @var $item CommonDBTM */
             $item  = new $itemtype();
             $item->getEmpty();
-            $table = getTableForItemType($itemtype);
-            $already_joined = array();
+            $table = $dbu->getTableForItemType($itemtype);
+            $already_joined = [];
             if (!$first) {
                $query.= " UNION ";
             }
@@ -763,7 +803,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
             }
             $query.= self::listInventoryObjectsRequestLeftJoins($params, $item, $table,
                                                                 $already_joined).
-                      getEntitiesRestrictRequest(" AND ", $table);
+                      $dbu->getEntitiesRestrictRequest(" AND ", $table);
             if ($item->maybeTemplate()) {
                $query .= " AND `".Toolbox::addslashes_deep($table)."`.`is_template`='0' ";
 
@@ -773,17 +813,14 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
             }
             $query .= self::listInventoryObjectsRequestParameters($params, $item, $table);
-            $first  = false;
          }
          $first = false;
-
-
       }
       $query .= " ORDER BY `name`
                   LIMIT $start, $limit";
 
       foreach ($DB->request($query) as $data) {
-         if (!($item = getItemForItemtype($data['itemtype']))) {
+         if (!($item = $dbu->getItemForItemtype($data['itemtype']))) {
             continue;
          }
          $data['itemtype_name'] = Html::clean($item->getTypeName());
@@ -800,25 +837,27 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Create inventory objects
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array of input parameters
+    * @param $protocol  string, communication protocol used
     *
+    * @return
    **/
    static function methodCreateObjects($params, $protocol) {
-      global $CFG_GLPI;
+//      global $CFG_GLPI;
 
       if (isset($params['help'])) {
          if (!is_array($params['help'])) {
-            return array('fields'   => 'array, mandatory',
-                         'help'     => 'bool, optional');
+            return ['fields'   => 'array, mandatory',
+                    'help'     => 'bool, optional'];
          } else {
-            $resp = array();
-            foreach($params['help'] as $itemtype) {
+            $resp = [];
+            foreach($params['fields'] as $itemtype) {
+               /* @var $item CommonDBTM */
                $item = new $itemtype();
-               //If user has right access on this itemtype
+               // If user has right access on this itemtype
                if ($item->canCreate()) {
                   $item->getEmpty();
-                  $blacklisted_field = array($item->getIndexName());
+                  $blacklisted_field = [$item->getIndexName()];
                   foreach($item->fields as $field => $default_v) {
                      if(!in_array($field,$blacklisted_field)) {
                         $resp[$itemtype][] = $field;
@@ -834,9 +873,9 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
-      //Must be superadmin to use this method
+      // Must be superadmin to use this method
       if(!Session::haveRight('config', UPDATE)){
-         $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
       if (!isset($params['fields'])
@@ -845,16 +884,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'fields');
       }
 
-      $datas   = array();
-      $resp    = array();
-      $errors  = array();
+      $datas   = [];
+      $resp    = [];
+      $errors  = [];
 
       foreach ($params['fields'] as $itemtype => $items) {
          foreach ($items as $fields) {
+            /* @var $item CommonDBTM */
             $item = new $itemtype();
 
             foreach($fields as $field => $value) {
-               if ($item->isField($field) || in_array($field, array('withtemplate'))) {
+               if ($item->isField($field) || in_array($field, ['withtemplate'])) {
                   $datas[$field] = $value;
                }
             }
@@ -870,8 +910,8 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                                                   '', self::getDisplayError());
             } else {
                if ($newID = $item->add($datas)) {
-                  $resp[$itemtype][] = self::methodGetObject(array('itemtype' => $itemtype,
-                                                                   'id'       => $newID),
+                  $resp[$itemtype][] = self::methodGetObject(['itemtype' => $itemtype,
+                                                              'id'       => $newID],
                                                              $protocol);
                } else {
                   $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_FAILED,
@@ -882,7 +922,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       if (count($errors)) {
-         $resp = array($resp,$errors);
+         $resp = [$resp, $errors];
       }
 
       return $resp;
@@ -892,16 +932,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Delete inventory objects
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array of input parameters
+    * @param $protocol  string, communication protocol used
     *
+    * @return
    **/
    static function methodDeleteObjects($params, $protocol) {
-      global $CFG_GLPI;
+//      global $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('fields'   => 'array, mandatory',
-                      'help'     => 'bool, optional');
+         return ['fields'   => 'array, mandatory',
+                 'help'     => 'bool, optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -919,29 +960,31 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'fields');
       }
 
-      $resp    = array();
-      $errors  = array();
+      $resp    = [];
+      $errors  = [];
       foreach($params['fields'] as $itemtype => $items) {
          foreach($items as $num => $key) {
             foreach($key as $name => $value) {
                $tab[$name] = $value;
-               $item       = new $itemtype();
-               $right = 'DELETE';
-               if (!$item->maybeDeleted) {
-                  $right = 'PURGE';
+               /* @var $item CommonDBTM */
+               $item = new $itemtype();
+               $right = DELETE;
+               if (!$item->maybeDeleted()) {
+                  $right = PURGE;
                }
                if(!$item->can($tab['id'], $right)){
                   $errors[$itemtype][$tab['id']] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED,
                                                               '', self::getDisplayError());
                } else {
-                  $resp[$itemtype][$tab['id']] = $item->delete(array('id' => $tab['id']), $tab['force']);
+                  $resp[$itemtype][$tab['id']] = $item->delete(['id' => $tab['id']],
+                                                               $tab['force']);
                }
             }
          }
       }
 
       if (count($errors)) {
-         $resp = array($resp,$errors);
+         $resp = [$resp, $errors];
       }
 
       return $resp;
@@ -951,16 +994,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Update inventory objects
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array of input parameters
+    * @param $protocol  string, communication protocol used
     *
+    * @return
    **/
    static function methodUpdateObjects($params, $protocol) {
-      global $CFG_GLPI;
+//      global $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('fields'   => 'array, mandatory',
-                      'help'     => 'bool, optional');
+         return ['fields'   => 'array, mandatory',
+                 'help'     => 'bool, optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -977,12 +1021,13 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          $_SESSION["glpi_currenttime"] = date("Y-m-d H:i:s");
       }
 
-      $resp    = array();
-      $datas   = array();
-      $errors  = array();
+      $resp    = [];
+//      $datas   = [];
+      $errors  = [];
 
       foreach ($params['fields'] as $itemtype => $items) {
          foreach ($items as $fields) {
+            /* @var $item CommonDBTM */
             $item    = new $itemtype();
             $id_item = $item->getIndexName();
 
@@ -1006,8 +1051,8 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                                                   '', self::getDisplayError());
             } else {
                if ($item->update($datas)) {
-                  $resp[$itemtype][] = self::methodGetObject(array('itemtype' => $itemtype,
-                                                                   'id'       => $fields[$id_item]),
+                  $resp[$itemtype][] = self::methodGetObject(['itemtype' => $itemtype,
+                                                              'id'       => $fields[$id_item]],
                                                              $protocol);
                } else {
                   $errors[$itemtype][] = self::Error($protocol, WEBSERVICES_ERROR_FAILED,
@@ -1018,7 +1063,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       if (count($errors)) {
-         $resp = array($resp,$errors);
+         $resp = [$resp, $errors];
       }
 
       return $resp;
@@ -1028,16 +1073,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Link inventory object to another one
     *
-    * @param $params    the input parameters
-    * @param $protocol  the commonication protocol used
+    * @param $params    array of input parameters
+    * @param $protocol  string, communication protocol used
     *
+    * @return
    **/
    static function methodLinkObjects($params, $protocol) {
-      global $CFG_GLPI;
+//      global $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('fields' => 'array, mandatory',
-                      'help'   => 'bool, optional');
+         return ['fields' => 'array, mandatory',
+                 'help'   => 'bool, optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -1045,7 +1091,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       //Must be superadmin to use this method
-      if(!Session::haveRight('config', UPDATE)){
+      if (!Session::haveRight('config', UPDATE)){
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 
@@ -1058,11 +1104,11 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          $_SESSION["glpi_currenttime"] = date("Y-m-d H:i:s");
       }
 
-      $resp    = array();
-      $errors  = array();
+      $resp    = [];
+      $errors  = [];
 
       foreach ($params['fields'] as $links) {
-         if (!in_array($links['from_item']['itemtype'], array('Computer'))
+         if (!in_array($links['from_item']['itemtype'], ['Computer'])
              && !preg_match("/Device/", $links['from_item']['itemtype'])) {
             $errors[] = self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED, '',
                                     self::getDisplayError());
@@ -1071,10 +1117,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          switch ($links['from_item']['itemtype']) {
             case 'Computer':
                // Direct connections
-               if (in_array($links['to_item']['itemtype'], array('Monitor', 'Peripheral', 'Phone',
-                                                                 'Printer'))) {
+               if (in_array($links['to_item']['itemtype'], ['Monitor', 'Peripheral', 'Phone',
+                                                            'Printer'])) {
                   $comp_item              = new Computer_Item();
-                  $data                   = array();
+                  $data                   = [];
                   $data['items_id']       = $links['to_item']['id'];
                   $data['computers_id']   = $links['from_item']['id'];
                   $data['itemtype']       = $links['to_item']['itemtype'];
@@ -1085,12 +1131,12 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                   } else {
                      if ($comp_item->add($data)) {
                         $resp['Computer'][$data['computers_id']]
-                              = self::methodGetObject(array('itemtype'        => 'Computer',
-                                                            'id'              => $data['computers_id'],
-                                                            'with_printer'    => 1,
-                                                            'with_monitor'    => 1,
-                                                            'with_phone'      => 1,
-                                                            'with_peripheral' => 1),
+                              = self::methodGetObject(['itemtype'        => 'Computer',
+                                                       'id'              => $data['computers_id'],
+                                                       'with_printer'    => 1,
+                                                       'with_monitor'    => 1,
+                                                       'with_phone'      => 1,
+                                                       'with_peripheral' => 1],
                                                       $protocol);
                      } else {
                         $errors[] = self::Error($protocol, WEBSERVICES_ERROR_FAILED,
@@ -1101,9 +1147,9 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
                // Device connection
                if (preg_match("/Device/",$links['to_item']['itemtype'])) {
-                  $comp_device            = new Computer_Device();
+                  $comp_device            = new Computer_Item();
                   $links_field            = getPlural(strtolower($links['to_item']['itemtype']))."_id";
-                  $data                   = array();
+                  $data                   = [];
                   $data['computers_id']   = $links['from_item']['id'];
                   $data[$links_field]     = $links['to_item']['id'];
                   $data['itemtype']       = $links['to_item']['itemtype'];
@@ -1139,8 +1185,8 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
                   if ($linked) {
                      $resp['Computer'][$data['computers_id']]
-                           = self::methodGetObject(array('itemtype'  => 'Computer',
-                                                         'id'        =>$data['computers_id']),
+                           = self::methodGetObject(['itemtype'  => 'Computer',
+                                                    'id'        =>$data['computers_id']],
                                                    $protocol);
                   } else {
                      $errors[] = self::Error($protocol, WEBSERVICES_ERROR_FAILED,
@@ -1155,7 +1201,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       if (count($errors)) {
-         $resp = array($resp,$errors);
+         $resp = [$resp, $errors];
       }
 
       return $resp;
@@ -1164,41 +1210,107 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
 
    /**
+    * Get a Document the authenticated user can view or anonymous (for public FAQ)
+    *
+    * @param $params    array of options (document, ticket)
+    * @param $protocol  string communication protocol used
+    *
+    * @return array with a hashtable
+    **/
+   static function methodGetDocument($params, $protocol) {
+
+      if (isset($params['help'])) {
+         return ['document' => 'integer,mandatory',
+            'ticket'   => 'interger,optional',
+            'id2name'  => 'bool,optional',
+            'help'     => 'bool,optional'];
+      }
+
+      // Allowed for anonymous user for public FAQ (right check in canViewFile)
+
+      $doc = new Document();
+
+      // Option parameter ticket
+      if (isset($params['ticket']) && !is_numeric($params['ticket'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
+            'ticket=' . $params['ticket']);
+      }
+
+      $options = [];
+      if (isset($params['ticket'])) {
+         $options['tickets_id'] = $params['ticket'];
+      }
+
+      // Mandatory parameter document
+      if (!isset($params['document'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'document');
+      }
+
+      if (!is_numeric($params['document'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
+            'document=' . $params['document']);
+      }
+
+      if (!$doc->getFromDB($params['document'])) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
+      }
+
+      if (!$doc->canViewFile($options)) {
+         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
+      }
+
+      $resp           = $doc->fields;
+      $resp['base64'] = base64_encode(file_get_contents(GLPI_DOC_DIR."/".$doc->fields['filepath']));
+
+      if (isset($params['id2name'])) {
+         $resp['users_name']
+            = Html::clean(getUserName($doc->fields['users_id']));
+         $resp['documentcategories_name']
+            = Html::clean(Dropdown::getDropdownName('glpi_documentcategories',
+            $doc->fields['documentcategories_id']));
+      }
+      return $resp;
+   }
+
+
+   /**
     * List all users of the current entity, with search criterias
     * for an authenticated user
     *
     * @param $params    array of options (user, group, location, login, name)
-    * @param $protocol        the commonication protocol used
+    * @param $protocol  string communication protocol used
     *
     * @return array of hashtable
    **/
    static function methodListUsers($params, $protocol) {
-      global $DB, $CFG_GLPI;
+      global $DB;
 
       if (isset($params['help'])) {
-         return array('count'    => 'bool,optional',
-                      'start'    => 'integer,optional',
-                      'limit'    => 'integer,optional',
-                      'order'    => 'string,optional',
-                      'entity'   => 'integer,optional',
-                      'parent'   => 'bool,optional',
-                      'user'     => 'integer,optional',
-                      'group'    => 'integer,optional',
-                      'location' => 'integer,optional',
-                      'login'    => 'string,optional',
-                      'name'     => 'string,optional',
-                      'help'     => 'bool,optional');
+         return ['count'    => 'bool,optional',
+                 'start'    => 'integer,optional',
+                 'limit'    => 'integer,optional',
+                 'order'    => 'string,optional',
+                 'entity'   => 'integer,optional',
+                 'parent'   => 'bool,optional',
+                 'user'     => 'integer,optional',
+                 'group'    => 'integer,optional',
+                 'location' => 'integer,optional',
+                 'login'    => 'string,optional',
+                 'name'     => 'string,optional',
+                 'help'     => 'bool,optional'];
       }
+
+      $dbu = new DbUtils();
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
-      $orders = array('id'     => '`glpi_users`.`id`',
-                      'name'   => ($_SESSION['glpinames_format'] == User::FIRSTNAME_BEFORE
+      $orders = ['id'     => '`glpi_users`.`id`',
+                 'name'   => ($_SESSION['glpinames_format'] == User::FIRSTNAME_BEFORE
                                     ? '`glpi_users`.`firstname`,`glpi_users`.`realname`'
                                     : '`glpi_users`.`realname`,`glpi_users`.`firstname`'),
-                      'login'  => '`glpi_users`.`name`');
+                 'login'  => '`glpi_users`.`name`'];
 
       $parent = 1;
       if (isset($params['parent'])) {
@@ -1221,7 +1333,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                          AND `glpi_useremails`.`is_default`)
                 WHERE `glpi_users`.`is_deleted` = '0'
                       AND `glpi_users`.`is_active` = '1' ".
-                      getEntitiesRestrictRequest('AND', "glpi_profiles_users", '', $ent, $parent);
+                      $dbu->getEntitiesRestrictRequest('AND', "glpi_profiles_users", '', $ent, $parent);
 
       if (isset($params['user']) && is_numeric($params['user'])) {
          $query .= " AND `glpi_users`.`id` = '" . $params['user'] . "'";
@@ -1243,10 +1355,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
          } else {
             $query .= " AND CONCAT(`glpi_users`.`realname`,' ',`glpi_users`.`firstname`)";
          }
-         $query .= " LIKE '" . addslashes($params['name']) . "'";
+         $query .= " LIKE '%" . addslashes($params['name']) . "%'";
       }
 
-      $resp = array ();
+      $resp = [];
       if (isset($params['count'])) {
          $query = "SELECT COUNT(DISTINCT `glpi_users`.`id`) AS count
                    FROM `glpi_users`
@@ -1291,100 +1403,38 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
 
 
    /**
-    * Get a Document the authenticated user can view or anonymous (for public FAQ)
-    *
-    * @param $params    array of options (document, ticket)
-    * @param $protocol        the commonication protocol used
-    *
-    * @return a hashtable
-   **/
-   static function methodGetDocument($params, $protocol) {
-
-      if (isset($params['help'])) {
-         return array('document' => 'integer,mandatory',
-                      'ticket'   => 'interger,optional',
-                      'id2name'  => 'bool,optional',
-                      'help'     => 'bool,optional');
-      }
-
-      // Allowed for anonymous user for public FAQ (right check in canViewFile)
-
-      $doc = new Document();
-
-      // Option parameter ticket
-      if (isset($params['ticket']) && !is_numeric($params['ticket'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
-                            'ticket=' . $params['ticket']);
-      }
-
-      $options=array();
-      if (isset($params['ticket'])) {
-         $options['tickets_id'] = $params['ticket'];
-      }
-
-      // Mandatory parameter document
-      if (!isset($params['document'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '', 'document');
-      }
-
-      if (!is_numeric($params['document'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '',
-                            'document=' . $params['document']);
-      }
-
-      if (!$doc->getFromDB($params['document'])) {
-         return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
-      }
-
-      if (!$doc->canViewFile($options)) {
-         return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
-      }
-
-      $resp           = $doc->fields;
-      $resp['base64'] = base64_encode(file_get_contents(GLPI_DOC_DIR."/".$doc->fields['filepath']));
-
-      if (isset($params['id2name'])) {
-         $resp['users_name']
-               = Html::clean(getUserName($doc->fields['users_id']));
-         $resp['documentcategories_name']
-               = Html::clean(Dropdown::getDropdownName('glpi_documentcategories',
-                                                       $doc->fields['documentcategories_id']));
-      }
-      return $resp;
-   }
-
-
-   /**
     * This method return groups list allowed
     * for an authenticated user
     *
     * @param $params array of options
-    * @param $protocol the commonication protocol used
+    * @param $protocol string communication protocol used
     *
-    * @return an response ready to be encode (ID + completename)
+    * @return array response ready to be encode (ID + completename)
    **/
    static function methodListGroups($params, $protocol) {
-      global $DB, $CFG_GLPI;
+      global $DB;
 
       if (isset($params['help'])) {
-         return array ('count'      => 'bool,optional',
-                       'start'      => 'integer,optional',
-                       'limit'      => 'integer,optional',
-                       'mine'       => 'bool,optional',
-                       'filter'     => 'string, optional',
-                       'parent'     => 'integer,optional',
-                       'under'      => 'integer,optional',
-                       'withparent' => 'bool,optional',
-                       'name'       => 'string,optional',
-                       'help'       => 'bool,optional');
+         return ['count'      => 'bool,optional',
+                 'start'      => 'integer,optional',
+                 'limit'      => 'integer,optional',
+                 'mine'       => 'bool,optional',
+                 'filter'     => 'string, optional',
+                 'parent'     => 'integer,optional',
+                 'under'      => 'integer,optional',
+                 'withparent' => 'bool,optional',
+                 'name'       => 'string,optional',
+                 'help'       => 'bool,optional'];
       }
+
+      $dbu = new DbUtils();
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
       $withparent = (isset($params['withparent']) && $params['withparent']);
-      $restrict   = getEntitiesRestrictRequest('', 'glpi_groups', '', '', $withparent);
+      $restrict   = $dbu->getEntitiesRestrictRequest('', 'glpi_groups', '', '', $withparent);
       if (isset($params['mine'])) {
          if (count($_SESSION['glpigroups'])) {
             $restrict .= "AND `id` IN ('".implode("','", $_SESSION['glpigroups'])."')";
@@ -1406,12 +1456,12 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
       $resp = array ();
       if (isset($params['count'])) {
-         $resp['count'] = countElementsInTable('glpi_groups', $restrict);
+         $resp['count'] = $dbu->countElementsInTable('glpi_groups', $restrict);
          return $resp;
       }
 
       if (isset($params['filter'])) {
-         $filters = array('is_requester', 'is_assign', 'is_notify', 'is_itemgroup', 'is_usergroup');
+         $filters = ['is_requester', 'is_assign', 'is_notify', 'is_itemgroup', 'is_usergroup'];
          if (in_array($params['filter'], $filters)) {
             $restrict .= " AND ".$params['filter'];
          } else {
@@ -1420,11 +1470,7 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
      }
 
       if (isset($params['name'])) {
-         if ($item instanceof CommonTreeDropdown) {
-            $restricty .= " AND `completename` LIKE '" . addslashes($params['name']) . "'";
-         } else {
-            $restrict .= " AND `name` LIKE '" . addslashes($params['name']) . "'";
-         }
+         $restrict .= " AND `completename` LIKE '%" . addslashes($params['name']) . "%'";
       }
 
       $start = 0;
@@ -1454,18 +1500,18 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
     * for an authenticated user
     *
     * @param $params array of options (computer)
-    * @param $protocol the commonication protocol used
+    * @param $protocol  string communication protocol used
     *
-    * @return hashtable -fields of glpi_computer
+    * @return array hashtable -fields of glpi_computer
     * @deprecated since 1.1.0
    **/
    static function methodGetPhones($params, $protocol) {
 
       if (isset($params['help'])) {
-         $params = array('itemtype' => 'string, mandatory',
-                         'id'       => 'integer, mandatory',
-                         'id2name'  => 'bool,optional',
-                         'help'     => 'bool,optional');
+         $params = ['itemtype' => 'string, mandatory',
+                    'id'       => 'integer, mandatory',
+                    'id2name'  => 'bool,optional',
+                    'help'     => 'bool,optional'];
          //Do not use computer parameter but id instead.
          //DEPRECATED, must be removed in the next release
          if ($params['itemtype'] == 'Computer') {
@@ -1489,18 +1535,18 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
     * for an authenticated user
     *
     * @param $params array of options (computer)
-    * @param protocol the commonication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return hashtable -fields of glpi_contracts
+    * @return array hashtable -fields of glpi_contracts
     * @deprecated since 1.1.0
    **/
    static function methodGetNetworkports($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array('id' => 'integer, mandatory',
-                      'id2name'  => 'bool,optional',
-                      'itemtype' => 'string, mandatory',
-                      'help'     => 'bool,optional');
+         return ['id' => 'integer, mandatory',
+                 'id2name'  => 'bool,optional',
+                 'itemtype' => 'string, mandatory',
+                 'help'     => 'bool,optional'];
       }
 
       $check = self::checkStandardParameters($params,$protocol);
@@ -1515,21 +1561,21 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    static function getRelatedObjects($params, $protocol, &$resp) {
 
       if (isset($params['infocoms'])) {
-         $infocoms = self::methodGetInfocoms($params, $protocol);
+         $infocoms = self::methodgetItemInfocoms($params, $protocol);
          if (!self::isError($protocol, $infocoms)) {
             $resp['infocoms'] = $infocoms;
          }
       }
 
       if (isset($params['contracts'])) {
-         $contracts = self::methodGetContracts($params, $protocol);
+         $contracts = self::methodgetItemContracts($params, $protocol);
          if (!self::isError($protocol, $contracts)) {
             $resp['contracts'] = $contracts;
          }
       }
 
       if (isset($params['networkports'])) {
-         $networkports = self::methodGetNetworkports($params, $protocol);
+         $networkports = self::getItemNetworkports($params, $protocol);
          if (!self::isError($protocol, $networkports)) {
             $resp['networkports'] = $networkports;
          }
@@ -1540,18 +1586,18 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Return Infocom for an object
     *
-    * @param $protocol           the commonication protocol used
+    * @param $protocol  string communication protocol used
     * @param $params    array
     *
-    * @return a hasdtable, fields of glpi_infocoms
+    * @return array hashtable, fields of glpi_infocoms
    **/
    static function methodgetItemInfocoms($params, $protocol) {
 
       if (isset($params['help'])) {
-         $params = array('itemtype' =>'string, mandatory',
-                         'id'       => 'integer, mandatory',
-                         'id2name'  => 'bool,optional',
-                         'help'     => 'bool,optional');
+         $params = ['itemtype' =>'string, mandatory',
+                    'id'       => 'integer, mandatory',
+                    'id2name'  => 'bool,optional',
+                    'help'     => 'bool,optional'];
       }
 
       $check = self::checkStandardParameters($params,$protocol);
@@ -1560,9 +1606,10 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
 
       if (!Session::haveRight("infocom", READ)) {
-         return array();
+         return [];
       }
       $infocom = new InfoCom();
+      /* @var $item CommonDBTM */
       $item    = new $params['itemtype']();
 
       $item->getTypeName();
@@ -1575,14 +1622,15 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       $resp['warranty_expiration'] = Infocom::getWarrantyExpir($infocom->fields['buy_date'],
                                                                $infocom->fields['warranty_duration']);
 
-      if ($id2name) {
+      if (isset($params['id2name'])) {
          // TODO : more dropdown value
          $resp['suppliers_name']
                = Html::clean(Dropdown::getDropdownName('glpi_suppliers',
                                                        $infocom->fields['suppliers_id']));
+         // Old ml_clean -> clean
          $resp['budgets_names']
-               = Html::ml_clean(Dropdown::getDropdownName('glpi_budgets',
-                                                          $infocom->fields['budgets_id']));
+               = Html::clean(Dropdown::getDropdownName('glpi_budgets',
+                                                       $infocom->fields['budgets_id']));
       }
       return $resp;
    }
@@ -1591,20 +1639,23 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
    /**
     * Return Infocom for an object
     *
-    * @param $protocol        the commonication protocol used
+    * @param $protocol  string communication protocol used
     * @param $params    array
     *
-    * @return a hasdtable, fields of glpi_infocoms
+    * @return array hashtable, fields of glpi_infocoms
    **/
    static function methodgetItemContracts($params, $protocol) {
       global $DB;
 
       if (isset($params['help'])) {
-         $params = array('itemtype' =>'string, mandatory',
-                         'id'       => 'integer, mandatory',
-                         'id2name'  => 'bool,optional',
-                         'help'     => 'bool,optional');
+         $params = ['itemtype' =>'string, mandatory',
+                    'id'       => 'integer, mandatory',
+                    'id2name'  => 'bool,optional',
+                    'help'     => 'bool,optional'];
       }
+
+      $dbu = new DbUtils();
+
       $check = self::checkStandardParameters($params,$protocol);
       if (!$check == 1) {
          exit();
@@ -1625,17 +1676,17 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
                 WHERE `glpi_contracts`.`id` = `glpi_contracts_items`.`contracts_id`
                       AND `glpi_contracts_items`.`items_id` = '".$params['id']."'
                       AND `glpi_contracts_items`.`itemtype` = '".$params['itemtype']."'".
-                      getEntitiesRestrictRequest(" AND","glpi_contracts",'','',true)."
+                      $dbu->getEntitiesRestrictRequest(" AND","glpi_contracts",'','',true)."
                 ORDER BY `glpi_contracts`.`name`";
 
       $result = $DB->query($query);
-      $resp   = array();
+      $resp   = [];
 
       while ($datas = $DB->fetch_array($result)) {
          $contract->getFromDB($datas['id']);
          $resp[$datas['id']] = $contract->fields;
 
-         if ($id2name) {
+         if (isset($params['id2name'])) {
             $resp[$datas['id']]['contracttypes_name']
                   = Html::clean(Dropdown::getDropdownName('glpi_contracttypes',
                                                           $contract->fields['contracttypes_id']));
@@ -1650,21 +1701,24 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
     * Get netwok ports for an object
     * for an authenticated user
     *
-    * @param $protocol the commonication protocol used
+    * @param $protocol string communication protocol used
     * @param $item_type : type of the item
     * @param $item_id : ID of the item
     * @param $id2name : translate id of dropdown to name
     *
+    * @return
    **/
    static function getItemNetworkports($protocol, $item_type, $item_id, $id2name=false) {
-      global $DB;
+//      global $DB;
 
+      $dbu  = new DbUtils();
+      /* @var $item CommonDBTM */
       $item = new $item_type();
-      $resp = array();
+      $resp = [];
 
       if ($item->getFromDB($item_id)  && $item->canView()) {
          //Get all ports for the object
-         $ports = getAllDatasFromTable('glpi_networkports',
+         $ports = $dbu->getAllDataFromTable('glpi_networkports',
                                        "`itemtype`='$item_type' AND `items_id`='$item_id'");
 
          foreach ($ports as $port) {
@@ -1701,5 +1755,105 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       }
       return $resp;
    }
+
+
+   static function getItems_Networkports($protocol, $itemtype, $items_id) {
+      global $DB, $CFG_GLPI;
+
+      $dbu = new DbUtils();
+
+      if (!Session::haveRight("networking", READ)) {
+         return [];
+      }
+
+      if (!in_array($itemtype, $CFG_GLPI['networkport_types'])) {
+         return false;
+      }
+
+      $query = ['SELECT'   => 'id',
+                'FROM'     => 'glpi_networkports',
+               ' WHERE'    => ['items_id' => $items_id,
+                               'itemtype' => $itemtype],
+                'ORDER'    => ['name', 'logical_number']];
+
+      if ($result = $DB->request($query)) {
+         $resp = [];
+
+         while ($devid = $result->next()) {
+            $netport = new NetworkPort;
+            $netport->getfromDB(current($devid));
+            $instantiation_type = $netport->fields["instantiation_type"];
+            $instname = call_user_func([$instantiation_type, 'getTypeName']);
+            $idnp = $netport->fields["id"];
+            $resp[$idnp]['id'] = $idnp;
+            $resp[$idnp]['name']               = $netport->fields["name"];
+            $resp[$idnp]['instantiation_type'] = $instname;
+            $resp[$idnp]['logical_number']     = $netport->fields["logical_number"];
+
+
+            $contact  = new NetworkPort;
+            $netport2 = new NetworkPort;
+
+            $add = 'Not connected';
+            if ($cid = $contact->getContact($netport->fields["id"])) {
+               if ($netport2->getFromDB($cid)
+                   && ($device2 = $dbu->getItemForItemtype($netport2->fields["itemtype"]))) {
+                  if ($device2->getFromDB($netport2->fields["items_id"])) {
+                     $add = $netport2->getName().' '.__('on').' '.
+                            $device2->getName().' ('.$device2->getTypeName().')';
+                  }
+               }
+            }
+
+            if ($instantiation_type == 'NetworkPortEthernet') {
+               $resp[$idnp]['Connected to'] = $add;
+
+               $netportethernet = new NetworkPortEthernet();
+               if ($netportethernet->getFromDB($netport->fields['id'])) {
+                  $resp[$idnp]['Ethernet port speed']
+                           = NetworkPortEthernet::getPortSpeed($netportethernet->fields['speed']);
+                  $resp[$idnp]['Ethernet port type']
+                           = NetworkPortEthernet::getPortTypeName($netportethernet->fields['type']);
+               }
+
+               $netpoint = new Netpoint();
+               if ($netpoint->getFromDB($netportethernet->fields['netpoints_id'])) {
+                  $resp[$idnp]['Network outlet'] = $netpoint->fields['name'];
+               }
+            }
+            $resp[$idnp]['MAC'] = $netport->fields["mac"];
+
+            $sqlip = ['LEFT JOIN' => ['glpi_networknames'
+                                       => ['FKEY' => ['glpi_ipaddresses'  => 'items_id',
+                                                      'glpi_networknames' => 'id'],
+                                                     ['glpi_ipaddresses.entities_id'
+                                                           => $netport->fields["entities_id"]]]],
+                      'WHERE'     => ['glpi_networknames.items_id' => $netport->fields["id"]]];
+
+            $ip     = new IPAddress();
+            if ($ip->getFromDBByRequest($sqlip)) {
+               $resp[$idnp]['IP']  = $ip->fields['name'];
+
+               $sql = ['SELECT'     => 'ipnetworks_id',
+                       'FROM'       => 'glpi_ipaddresses_ipnetworks',
+                       'LEFT JOIN'  => ['glpi_ipnetworks'
+                                        =>['FKEY' => ['glpi_ipaddresses_ipnetworks' => 'ipnetworks_id',
+                                                      'glpi_ipnetworks'             => 'id']]],
+                       'WHERE'      => ['ipaddresses_id' => $ip->getID(),
+                                        $dbu->getEntitiesRestrictCriteria('glpi_ipnetworks')]];
+
+               $res = $DB->request($sql);
+               if ($res) {
+                  $row = $res->next();
+
+                  $ipnetwork = new IPNetwork();
+                  if ($ipnetwork->getFromDB($row['ipnetworks_id'])) {
+                     $resp[$idnp]['IP network'] = $ipnetwork->fields['completename'];
+                  }
+               }
+            } // each port
+         }
+      }
+      return $resp;
+   }
 }
-?>

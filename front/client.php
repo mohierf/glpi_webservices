@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: client.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: client.php 449 2018-03-15 14:59:12Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -42,4 +42,3 @@ Html::header(__('Web Services', 'webservices'), $_SERVER['PHP_SELF'], "config",
 Search::show('PluginWebservicesClient');
 
 Html::footer();
-?>

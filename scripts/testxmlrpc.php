@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: testxmlrpc.php 408 2015-09-16 13:19:06Z remi $
+ * @version $Id: testxmlrpc.php 452 2018-03-16 15:51:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -41,7 +41,10 @@ chdir(dirname($_SERVER["SCRIPT_FILENAME"]));
 chdir("../../..");
 $url = "/".basename(getcwd())."/plugins/webservices/xmlrpc.php";
 
-$args = array();
+$confname = getcwd();
+$configfile = (getenv('HOME') ? getenv('HOME') . '/.config' :  sys_get_temp_dir()) . '/glpi_webservices_config' ;
+
+$args = [];
 if ($_SERVER['argc']>1) {
    for ($i=1 ; $i<count($_SERVER['argv']) ; $i++) {
       $it           = explode("=",$argv[$i],2);
@@ -65,14 +68,28 @@ if (isset($args['help']) && !isset($args['method'])) {
    die( "\nOther options are used for XML-RPC call.\n\n");
 }
 
+$fullconf = [];
+if (file_exists($configfile)) {
+   if ($txt = file_get_contents($configfile)) {
+      if ($fullconf = json_decode($txt, true)) {
+         echo "+ Configuration read from '$configfile'\n";
+      }
+      $conf = (isset($fullconf[$confname]) ? $fullconf[$confname] : false);
+   }
+}
+
 if (isset($args['url'])) {
    $url = $args['url'];
    unset($args['url']);
+} else if (isset($conf['url'])) {
+   $url = $conf['url'];
 }
 
 if (isset($args['https'])) {
    $proto = 'https';
    unset($args['https']);
+} else if (isset($conf['proto'])) {
+   $proto = $conf['proto'];
 } else {
    $proto = 'http';
 }
@@ -80,6 +97,8 @@ if (isset($args['https'])) {
 if (isset($args['host'])) {
    $host = $args['host'];
    unset($args['host']);
+} else if (isset($conf['host'])) {
+   $host = $conf['host'];
 } else {
    $host = 'localhost';
 }
@@ -94,6 +113,8 @@ if (isset($args['method'])) {
 if (isset($args['session'])) {
    $url .= '?session='.$args['session'];
    unset($args['session']);
+} if (isset($conf['session'])) {
+   $url .= '?session='.$conf['session'];
 }
 
 $header = "Content-Type: text/xml";
@@ -119,9 +140,9 @@ foreach($args as $key => $value) {
 echo "+ Calling '$method' on $proto://$host/$url\n";
 
 $request = xmlrpc_encode_request($method, $args);
-$context = stream_context_create(array('http' => array('method'  => "POST",
-                                                       'header'  => $header,
-                                                       'content' => $request)));
+$context = stream_context_create(['http' => ['method'  => "POST",
+                                             'header'  => $header,
+                                             'content' => $request]]);
 
 $file = file_get_contents("$proto://$host/$url", false, $context);
 if (!$file) {
@@ -135,7 +156,7 @@ if (in_array('Content-Encoding: deflate', $http_response_header)) {
    $lend = strlen($file);
    echo "+ Uncompressed response : $lend (".round(100.0*$lenc/$lend)."%)\n";
 }
-$response = xmlrpc_decode($file);
+$response = xmlrpc_decode($file, "UTF-8");
 if (!is_array($response)) {
    echo $file;
    die ("+ Bad response\n");
@@ -144,7 +165,22 @@ if (!is_array($response)) {
 if (xmlrpc_is_fault($response)) {
     echo("xmlrpc error(".$response['faultCode']."): ".$response['faultString']."\n");
 } else {
+   if (isset($response['base64']) && isset($response['name'])) {
+      $dest = sys_get_temp_dir() . '/' . basename($response['name']);
+      if (file_put_contents($dest, base64_decode($response['base64']))) {
+         $response['base64'] = "** saved in '$dest' **";
+      }
+   }
+   if (($method == 'glpi.doLogin') && isset($response['session'])) {
+      $fullconf[$confname] = ['proto'   => $proto,
+                              'host'    => $host,
+                              'url'     => preg_replace('/\?session=.*$/', '', $url),
+                              'session' => $response['session']];
+      $json = json_encode($fullconf, (defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 0));
+      if (file_put_contents($configfile, $json)) {
+         echo "+ Configuration saved in '$configfile'\n";
+      }
+   }
    echo "+ Response: ";
    print_r($response);
 }
-?>

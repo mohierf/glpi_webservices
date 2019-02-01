@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: setup.php 406 2015-09-06 16:04:39Z yllen $
+ * @version $Id: setup.php 465 2018-11-29 14:50:19Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -39,121 +39,114 @@ function plugin_init_webservices() {
    $PLUGIN_HOOKS['csrf_compliant']['webservices'] = true;
 
    if (Session::haveright("config", UPDATE)) {
-      $PLUGIN_HOOKS["menu_toadd"]['webservices'] = array('config'  => 'PluginWebservicesClient');
+      $PLUGIN_HOOKS["menu_toadd"]['webservices'] = ['config'  => 'PluginWebservicesClient'];
    }
    $PLUGIN_HOOKS['webservices']['webservices'] = 'plugin_webservices_registerMethods';
 
    //Store objects that can be retrieved when querying another object
-   $WEBSERVICE_LINKED_OBJECTS
-      = array('with_infocom'     => array('help'           => 'bool, optional',
-                                          'itemtype'       => 'Infocom',
-                                          'allowed_types'  => $CFG_GLPI['infocom_types'],
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+   $WEBSERVICE_LINKED_OBJECTS = [
+      'with_infocom'          => ['help'           => 'bool, optional',
+                                  'itemtype'       => 'Infocom',
+                                  'allowed_types'  => $CFG_GLPI['infocom_types'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_networkport' => array('help'           => 'bool, optional',
-                                          'itemtype'       => 'NetworkPort',
-                                          'allowed_types'  => plugin_webservices_getNetworkPortItemtypes(),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_phone'            => ['help'           => 'bool, optional (Computer only)',
+                                  'itemtype'       => 'Phone',
+                                  'allowed_types'  => ['Computer'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_phone'       => array('help'           => 'bool, optional (Computer only)',
-                                          'itemtype'       => 'Phone',
-                                          'allowed_types'  => array('Computer'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_printer'          => ['help'           => 'bool', 'optional (Computer only)',
+                                  'itemtype'       => 'Printer',
+                                  'allowed_types'  => ['Computer'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_printer'     => array('help'           => 'bool', 'optional (Computer only)',
-                                          'itemtype'       => 'Printer',
-                                          'allowed_types'  => array('Computer'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_monitor'          => ['help'           => 'bool', 'optional (Computer only)',
+                                  'itemtype'       => 'Monitor',
+                                  'allowed_types'  => ['Computer'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_monitor'     => array('help'           => 'bool', 'optional (Computer only)',
-                                          'itemtype'       => 'Monitor',
-                                          'allowed_types'  => array('Computer'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_peripheral'       => ['help'           => 'bool', 'optional (Computer only)',
+                                  'itemtype'       => 'Peripheral',
+                                  'allowed_types'  => ['Computer'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_peripheral'  => array('help'           => 'bool', 'optional (Computer only)',
-                                          'itemtype'       => 'Peripheral',
-                                          'allowed_types'  => array('Computer'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_document'         => ['help'           => 'bool', 'optional',
+                                  'itemtype'       => 'Document',
+                                  'allowed_types'  => plugin_webservices_getDocumentItemtypes(),
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_document'    => array('help'           => 'bool', 'optional',
-                                          'itemtype'       => 'Document',
-                                          'allowed_types'  => plugin_webservices_getDocumentItemtypes(),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_ticket'           => ['help'           => 'bool', 'optional',
+                                  'itemtype'       => 'Ticket',
+                                  'allowed_types'  => plugin_webservices_getTicketItemtypes(),
+                                  'class'          => 'PluginWebservicesMethodHelpdesk'],
 
-              'with_ticket'      => array('help'           => 'bool', 'optional',
-                                          'itemtype'       => 'Ticket',
-                                          'allowed_types'  => plugin_webservices_getTicketItemtypes(),
-                                          'class'          => 'PluginWebservicesMethodHelpdesk'),
+      'with_tickettask'       => ['help'           => 'bool', 'optional (Ticket only)',
+                                  'itemtype'       => 'TicketTask',
+                                  'allowed_types'  => ['Ticket'],
+                                  'class'          => 'PluginWebservicesMethodHelpdesk'],
 
-              'with_tickettask'  => array('help'           => 'bool', 'optional (Ticket only)',
-                                          'itemtype'       => 'TicketTask',
-                                          'allowed_types'  => array('Ticket'),
-                                          'class'          => 'PluginWebservicesMethodHelpdesk'),
+      'with_ticketfollowup'   => ['help'           => 'bool', 'optional (Ticket only)',
+                                  'itemtype'       => 'TicketFollowup',
+                                  'allowed_types'  => ['Ticket'],
+                                  'class'          => 'PluginWebservicesMethodHelpdesk'],
 
-              'with_ticketfollowup'
-                                 => array('help'           => 'bool', 'optional (Ticket only)',
-                                          'itemtype'       => 'TicketFollowup',
-                                          'allowed_types'  => array('Ticket'),
-                                          'class'          => 'PluginWebservicesMethodHelpdesk'),
-              'with_ticketvalidation'
-                                 => array('help'           => 'bool', 'optional (Ticket only)',
-                                          'itemtype'       => 'TicketValidation',
-                                          'allowed_types'  => array('Ticket'),
-                                          'class'          => 'PluginWebservicesMethodHelpdesk'),
+      'with_ticketvalidation' => ['help'           => 'bool', 'optional (Ticket only)',
+                                  'itemtype'       => 'TicketValidation',
+                                  'allowed_types'  => ['Ticket'],
+                                  'class'          => 'PluginWebservicesMethodHelpdesk'],
 
-              'with_reservation' => array('help'           => 'bool',
-                                          'itemtype'       => 'Reservation',
-                                          'allowed_types'  => $CFG_GLPI['reservation_types'],
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_reservation'      => ['help'           => 'bool',
+                                  'itemtype'       => 'Reservation',
+                                  'allowed_types'  => $CFG_GLPI['reservation_types'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_software'    => array('help'           => 'bool',
-                                          'itemtype'       => 'Software',
-                                          'allowed_types'  => array('Computer'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_software'         => ['help'           => 'bool',
+                                  'itemtype'       => 'Software',
+                                  'allowed_types'  => ['Computer'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_softwareversion'
-                                 => array('help'           => 'bool',
-                                          'itemtype'       => 'SoftwareVersion',
-                                          'allowed_types'  => array('Software'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_softwareversion'  => ['help'           => 'bool',
+                                  'itemtype'       => 'SoftwareVersion',
+                                  'allowed_types'  => ['Software'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_softwarelicense'
-                                 => array('help'           => 'bool',
-                                          'itemtype'       => 'SoftwareLicense',
-                                          'allowed_types'  => array('Software'),
-                                          'class'          => 'PluginWebservicesMethodInventaire'),
+      'with_softwarelicense'  => ['help'           => 'bool',
+                                  'itemtype'       => 'SoftwareLicense',
+                                  'allowed_types'  => ['Software'],
+                                  'class'          => 'PluginWebservicesMethodInventaire'],
 
-              'with_contract'    => array('help'           => 'bool',
-                                          'itemtype'       => 'Contract',
-                                          'allowed_types'  => $CFG_GLPI['contract_types'],
-                                          'class'          => 'PluginWebservicesMethodInventaire')
-   );
+      'with_contract'         => ['help'           => 'bool',
+                                  'itemtype'       => 'Contract',
+                                  'allowed_types'  => $CFG_GLPI['contract_types'],
+                                  'class'          => 'PluginWebservicesMethodInventaire']
+   ];
 }
 
 
-// Get the name and the version of the plugin - Needed
 function plugin_version_webservices() {
 
-   return array('name'           => __('Web Services', 'webservices'),
-                'version'        => '1.5.1-fork',
-                'author'         => 'F. Mohier, from Remi Collet, Nelly Mahu-Lasson',
-                'license'        => 'GPLv2+',
-                'homepage'       => 'https://forge.indepnet.net/projects/webservices',
-                'minGlpiVersion' => '0.85');
+   return ['name'           => __('Web Services', 'webservices'),
+           'version'        => '1.9.0-fork',
+           'author'         => 'Frédéric Mohier, Remi Collet, Nelly Mahu-Lasson',
+           'license'        => 'GPLv2+',
+           'homepage'       => 'https://forge.glpi-project.org/projects/webservices',
+           'minGlpiVersion' => '9.3',
+           'requirements'   => ['glpi' => ['min' => '9.3',
+                                           'max' => '9.4']]];
 }
 
 
 // Optional : check prerequisites before install : may print errors or add to message after redirect
 function plugin_webservices_check_prerequisites() {
 
-   if (version_compare(GLPI_VERSION,'0.85','lt') || version_compare(GLPI_VERSION,'0.86','ge')) {
-      _e('Incompatible GLPI version. Requires 0.85', 'webservices');
+   if (version_compare(GLPI_VERSION,'9.3','lt') || version_compare(GLPI_VERSION,'9.4','ge')) {
+      echo "This plugin requires GLPI >= 9.3 and GLPI < 9.4";
    } else if (!extension_loaded("soap")) {
-      _e('Incompatible PHP Installation. Requires module soap', 'webservices');
+      echo "Incompatible PHP Installation. Requires module soap";
    } else if (!function_exists("xmlrpc_encode")) {
-      _e('Incompatible PHP Installation. Requires module xmlrpc', 'webservices');
+      echo "Incompatible PHP Installation. Requires module xmlrpc";
    } else if (!function_exists("json_encode")) {
-      _e('Incompatible PHP Installation. Requires module json', 'webservices');
+      echo "Incompatible PHP Installation. Requires module json";
    } else {
       return true;
    }
@@ -163,7 +156,9 @@ function plugin_webservices_check_prerequisites() {
 
 // Uninstall process for plugin : need to return true if succeeded : may display messages or add to message after redirect
 function plugin_webservices_check_config() {
-   return TableExists("glpi_plugin_webservices_clients");
+   global $DB;
+
+   return $DB->tableExists("glpi_plugin_webservices_clients");
 }
 
 
@@ -187,4 +182,3 @@ function plugin_webservices_getTicketItemtypes() {
    return $CFG_GLPI['ticket_types'];
 
 }
-?>

@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: examplesoap.php 396 2014-11-23 18:46:25Z yllen $
+ * @version $Id: examplesoap.php 465 2018-11-29 14:50:19Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -46,11 +46,11 @@ chdir(dirname($_SERVER["SCRIPT_FILENAME"]));
 chdir("../../..");
 $url = "/" . basename(getcwd()) . "/plugins/webservices/soap.php";
 
-$args = array ();
+$args = [];
 if ($_SERVER['argc'] > 1) {
    for ($i = 1 ; $i < count($_SERVER['argv']) ; $i++) {
-      $it = explode("=", $argv[$i], 2);
-      $it[0] = preg_replace('/^--/', '', $it[0]);
+      $it           = explode("=", $argv[$i], 2);
+      $it[0]        = preg_replace('/^--/', '', $it[0]);
       $args[$it[0]] = (isset($it[1]) ? $it[1] : true);
    }
 }
@@ -126,8 +126,8 @@ if (isset($args['ws_pass'])) {
 * INIT CLIENT SOAP
 */
 
-$client = new SoapClient(null, array('uri'      => 'http://' . $host . '/' . $url,
-                                     'location' => 'http://' . $host . '/' . $url));
+$client = new SoapClient(null, ['uri'      => 'http://' . $host . '/' . $url,
+                                'location' => 'http://' . $host . '/' . $url]);
 
 
 /*
@@ -151,6 +151,8 @@ function login() {
     if ($result = call_glpi($args)) {
        return $result['session'];
     }
+
+    return [];
 }
 
 
@@ -163,6 +165,8 @@ function logout() {
     if ($result = call_glpi($args)) {
        return true;
     }
+
+   return false;
 }
 
 
@@ -175,7 +179,7 @@ function call_glpi($args) {
    echo "+ Calling {$args['method']} on http://$host/$url\n";
 
    try {
-      $result = $client->__soapCall('genericExecute', array(new SoapParam($args, 'params')));
+      $result = $client->__soapCall('genericExecute', [new SoapParam($args, 'params')]);
       return $result;
    } catch (SoapFault $fault) {
       echo $fault."\n";
@@ -196,11 +200,11 @@ $session = login();
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('Entity' => array(array('name'         => 'WSOAP_Entity_01_TESTING',
-                                                 'entities_id'  => 0,
-                                                 'completename' => 'Entity WEBSERVICES TEST',
-                                                 'comment'      => 'TEST Entity for webservices.',
-                                                 'level'        => 1)));
+$args['fields']  = ['Entity' => [['name'         => 'WSOAP_Entity_01_TESTING',
+                                  'entities_id'  => 0,
+                                  'completename' => 'Entity WEBSERVICES TEST',
+                                  'comment'      => 'TEST Entity for webservices.',
+                                  'level'        => 1]]];
 
 $entity          = call_glpi($args);
 $entity          = $entity['Entity'][0]['id'];
@@ -216,18 +220,18 @@ $session = login();
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('User'  => array(array('name'         => $glpi_test_user,
-                                                'password'     => md5($glpi_test_pass),
-                                                'realname'     => 'Soap TEST',
-                                                'firstname'    => 'Soap USER',
-                                                'use_mode'     => 0,
-                                                'entities_id'  => $entity,
-                                                'profiles_id'  => $profile)),
+$args['fields']  = ['User'  => [['name'         => $glpi_test_user,
+                                 'password'     => md5($glpi_test_pass),
+                                 'realname'     => 'Soap TEST',
+                                 'firstname'    => 'Soap USER',
+                                 'use_mode'     => 0,
+                                 'entities_id'  => $entity,
+                                 'profiles_id'  => 0]],
 
-                         'Group' => array(array('name'         => 'WSOAP_Group_01_TESTING',
-                                                'comment'      => 'TEST Group for Webservices.',
-                                                'entities_id'  => $entity,
-                                                'is_recursive' => 1)));
+                    'Group' => [['name'         => 'WSOAP_Group_01_TESTING',
+                                 'comment'      => 'TEST Group for Webservices.',
+                                 'entities_id'  => $entity,
+                                 'is_recursive' => 1]]];
 
 $result          = call_glpi($args);
 $user            = $result['User'][0]['id'];
@@ -239,19 +243,19 @@ $group           = $result['Group'][0]['id'];
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('Computer' => array(array('name'         => 'WSOAP_Computer_01_TESTING',
-                                                   'serial'       => 'I98GFD-FF98-F0ZFDF8-980',
-                                                   'otherserial'  => '0000134',
-                                                   'entities_id'  => $entity,
-                                                   'users_id'     => $user,
-                                                   'groups_id'    => $group)),
+$args['fields']  = ['Computer' => [['name'         => 'WSOAP_Computer_01_TESTING',
+                                    'serial'       => 'I98GFD-FF98-F0ZFDF8-980',
+                                    'otherserial'  => '0000134',
+                                    'entities_id'  => $entity,
+                                    'users_id'     => $user,
+                                    'groups_id'    => $group]],
 
-                         'Monitor'  => array(array('name'         => 'WSOAP_Monitor_01_TESTING',
-                                                   'serial'       => 'I98GFD-8973987-DE98',
-                                                   'otherserial'  => '0000190',
-                                                   'entities_id'  => $entity,
-                                                   'users_id'     => $user,
-                                                   'groups_id'    => $group)));
+                    'Monitor'  => [['name'         => 'WSOAP_Monitor_01_TESTING',
+                                    'serial'       => 'I98GFD-8973987-DE98',
+                                    'otherserial'  => '0000190',
+                                    'entities_id'  => $entity,
+                                    'users_id'     => $user,
+                                    'groups_id'    => $group]]];
 
 $items = call_glpi($args);
 
@@ -264,9 +268,9 @@ $computer         = $items['Computer'][0]['id'];
 $monitor          = $items['Monitor'][0]['id'];
 $args['session']  = $session;
 $args['method']   = "glpi.createObjects";
-$args['fields']   = array('Computer_Item' => array(array('items_id'     => $monitor,
-                                                         'computers_id' => $computer,
-                                                         'itemtype'     => 'Monitor')));
+$args['fields']   = ['Computer_Item' => [['items_id'     => $monitor,
+                                          'computers_id' => $computer,
+                                          'itemtype'     => 'Monitor']]];
 
 call_glpi($args);
 
@@ -285,4 +289,3 @@ $args['with_monitor']   = 1;
 print_r(call_glpi($args));
 
 logout();
-?>

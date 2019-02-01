@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: examplexmlrpc.php 396 2014-11-23 18:46:25Z yllen $
+ * @version $Id: examplexmlrpc.php 452 2018-03-16 15:51:45Z yllen $
  -------------------------------------------------------------------------
  webservices - WebServices plugin for GLPI
  Copyright (C) 2003-2013 by the webservices Development Team.
@@ -27,10 +27,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -51,7 +51,7 @@ chdir(dirname($_SERVER["SCRIPT_FILENAME"]));
 chdir("../../..");
 $url = "/" . basename(getcwd()) . "/plugins/webservices/xmlrpc.php";
 
-$args = array ();
+$args = [];
 if ($_SERVER['argc'] > 1) {
    for ($i = 1 ; $i < count($_SERVER['argv']) ; $i++) {
       $it           = explode("=", $argv[$i], 2);
@@ -163,6 +163,8 @@ function login() {
     if ($result = call_glpi($args)) {
        return $result['session'];
     }
+
+   return [];
 }
 
 
@@ -175,6 +177,8 @@ function logout() {
     if ($result = call_glpi($args)) {
        return true;
     }
+
+    return false;
 }
 
 
@@ -206,9 +210,9 @@ function call_glpi($args) {
    }
 
    $request = xmlrpc_encode_request($args['method'], $args);
-   $context = stream_context_create(array('http' => array('method'  => "POST",
-                                                          'header'  => $header,
-                                                          'content' => $request)));
+   $context = stream_context_create(['http' => ['method'  => "POST",
+                                                'header'  => $header,
+                                                'content' => $request]]);
 
    $file = file_get_contents("http://$host/$url_session", false, $context);
    if (!$file) {
@@ -223,7 +227,7 @@ function call_glpi($args) {
       echo "+ Uncompressed response : $lend (".round(100.0*$lenc/$lend)."%)\n";
    }
 
-   $response = xmlrpc_decode($file);
+   $response = xmlrpc_decode($file, "UTF-8");
    if (!is_array($response)) {
       echo $file;
       die ("+ Bad response\n");
@@ -234,6 +238,8 @@ function call_glpi($args) {
    } else {
       return $response;
    }
+
+   return [];
 }
 
 
@@ -251,11 +257,11 @@ $session = login();
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('Entity' => array(array('name'          => 'WSXML-RPC_Entity_01_TESTING',
-                                                 'entities_id'   => 0,
-                                                 'completename'  => 'Entity WEBSERVICES TEST',
-                                                 'comment'       => 'TEST Entity for webservices.',
-                                                 'level'         => 1)));
+$args['fields']  = ['Entity' => [['name'          => 'WSXML-RPC_Entity_01_TESTING',
+                                  'entities_id'   => 0,
+                                  'completename'  => 'Entity WEBSERVICES TEST',
+                                  'comment'       => 'TEST Entity for webservices.',
+                                  'level'         => 1]]];
 
 $entity          = call_glpi($args);
 $entity          = $entity['Entity'][0]['id'];
@@ -270,18 +276,18 @@ $session = login();
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('User'  => array(array('name'         => $glpi_test_user,
-                                                'password'     => md5($glpi_test_pass),
-                                                'realname'     => 'Xml-Rpc TEST',
-                                                'firstname'    => 'Xml-Rpc USER',
-                                                'use_mode'     => 0,
-                                                'entities_id'  => $entity,
-                                                'profiles_id'  => $profile)),
+$args['fields']  = ['User'  => [['name'         => $glpi_test_user,
+                                 'password'     => md5($glpi_test_pass),
+                                 'realname'     => 'Xml-Rpc TEST',
+                                 'firstname'    => 'Xml-Rpc USER',
+                                 'use_mode'     => 0,
+                                 'entities_id'  => $entity,
+                                 'profiles_id'  => 0]],
 
-                         'Group' => array(array('name'         => 'WSXML-RPC_Group_01_TESTING',
-                                                'comment'      => 'TEST Group for Webservices.',
-                                                'entities_id'  => $entity,
-                                                'is_recursive' => 1)));
+                    'Group' => [['name'         => 'WSXML-RPC_Group_01_TESTING',
+                                 'comment'      => 'TEST Group for Webservices.',
+                                 'entities_id'  => $entity,
+                                 'is_recursive' => 1]]];
 
 $result          = call_glpi($args);
 $user            = $result['User'][0]['id'];
@@ -293,19 +299,19 @@ $group           = $result['Group'][0]['id'];
 */
 $args['session'] = $session;
 $args['method']  = "glpi.createObjects";
-$args['fields']  = array('Computer' => array(array('name'        => 'WSXML-RPC_Computer_01_TESTING',
-                                                   'serial'      => 'I98GFD-FF98-F0ZFDF8-980',
-                                                   'otherserial' => '0000134',
-                                                   'entities_id' => $entity,
-                                                   'users_id'    => $user,
-                                                   'groups_id'   => $group)),
+$args['fields']  = ['Computer' => [['name'        => 'WSXML-RPC_Computer_01_TESTING',
+                                    'serial'      => 'I98GFD-FF98-F0ZFDF8-980',
+                                    'otherserial' => '0000134',
+                                    'entities_id' => $entity,
+                                    'users_id'    => $user,
+                                    'groups_id'   => $group]],
 
-                         'Monitor'  => array(array('name'        => 'WSXML-RPC_Monitor_01_TESTING',
-                                                   'serial'      => 'I98GFD-8973987-DE98',
-                                                   'otherserial' => '0000190',
-                                                   'entities_id' => $entity,
-                                                   'users_id'    => $user,
-                                                   'groups_id'   => $group)));
+                    'Monitor'  => [['name'        => 'WSXML-RPC_Monitor_01_TESTING',
+                                    'serial'      => 'I98GFD-8973987-DE98',
+                                    'otherserial' => '0000190',
+                                    'entities_id' => $entity,
+                                    'users_id'    => $user,
+                                    'groups_id'   => $group]]];
 
 $items = call_glpi($args);
 
@@ -318,9 +324,9 @@ $computer         = $items['Computer'][0]['id'];
 $monitor          = $items['Monitor'][0]['id'];
 $args['session']  = $session;
 $args['method']   = "glpi.createObjects";
-$args['fields']   = array('Computer_Item' => array(array('items_id'     => $monitor,
-                                                         'computers_id' => $computer,
-                                                         'itemtype'     => 'Monitor')));
+$args['fields']   = ['Computer_Item' => [['items_id'     => $monitor,
+                                          'computers_id' => $computer,
+                                          'itemtype'     => 'Monitor']]];
 
 call_glpi($args);
 
@@ -339,4 +345,3 @@ $args['with_monitor']   = 1;
 print_r(call_glpi($args));
 
 logout();
-?>

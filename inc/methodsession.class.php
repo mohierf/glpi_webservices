@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodsession.class.php 398 2014-12-05 16:15:48Z yllen $
+ * @version $Id: methodsession.class.php 465 2018-11-29 14:50:19Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -43,9 +43,9 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     * => login_name : mandatory user name
     * => login_password : mandatory user password
     * => other : optionnal values for post action
-    *@param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return an response ready to be encode
+    * @return array response ready to be encode
     * => id of the user
     * => name of the user
     * => realname of the user
@@ -55,9 +55,9 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
    static function methodLogin($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array( 'login_name'     => 'string,mandatory',
-                       'login_password' => 'string,mandatory',
-                       'help'           => 'bool,optional');
+         return ['login_name'     => 'string,mandatory',
+                 'login_password' => 'string,mandatory',
+                 'help'           => 'bool,optional'];
       }
 
       if (!isset($params['login_name']) || empty($params['login_name'])) {
@@ -83,11 +83,11 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
 
       if ($identificat->Login($params['login_name'], $params['login_password'], true)) {
          session_write_close();
-         return (array('id'        => Session::getLoginUserID(),
-                       'name'      => $_SESSION['glpiname'],
-                       'realname'  => $_SESSION['glpirealname'],
-                       'firstname' => $_SESSION['glpifirstname'],
-                       'session'   => $_SESSION['valid_id']));
+         return (['id'        => Session::getLoginUserID(),
+                  'name'      => $_SESSION['glpiname'],
+                  'realname'  => $_SESSION['glpirealname'],
+                  'firstname' => $_SESSION['glpifirstname'],
+                  'session'   => $_SESSION['valid_id']]);
       }
       return self::Error($protocol, WEBSERVICES_ERROR_LOGINFAILED, '',
                          Html::clean($identificat->getErr()));
@@ -98,16 +98,16 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     * This method try to identicate a user
     *
     * @param $params array of options ignored
-    * @param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return an response ready to be encode
+    * @return array response ready to be encode
     * => fields of glpi_users
    **/
    static function methodGetMyInfo($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array ('help'    => 'bool,optional',
-                       'id2name' => 'bool,optional');
+         return ['help'    => 'bool,optional',
+                 'id2name' => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -118,7 +118,7 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       if ($user->getFromDB($uid=Session::getLoginUserID())) {
          $resp = $user->fields;
 
-         $resp['email'] = UserEmail::getDefaultForUser($uid);
+         $resp['email']  = UserEmail::getDefaultForUser($uid);
          $resp['emails'] = UserEmail::getAllForUser($uid);
 
          if (isset($params['id2name'])) {
@@ -145,15 +145,14 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     * This method try to identicate an user
     *
     * @param $params array of options ignored
-    * @param $protocol the communication protocol used
     *
-    * @return a response ready to be encode
+    * @return array response ready to be encode
     * => Nothing
    **/
-   static function methodLogout($params, $protocol) {
+   static function methodLogout($params) {
 
       if (isset($params['help'])) {
-         return array ('help' => 'bool,optional');
+         return ['help' => 'bool,optional'];
       }
 
       $msg = "Bye ";
@@ -164,7 +163,7 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
 
       Session::destroy();
 
-      return array ('message' => $msg);
+      return ['message' => $msg];
    }
 
 
@@ -172,26 +171,26 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     * This method try to identicate an user
     *
     * @param $params array of options ignored
-    * @param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return a response ready to be encode
+    * @return array response ready to be encode
     * => fields of glpi_users
    **/
    static function methodListMyProfiles($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array ('help' => 'bool,optional');
+         return ['help' => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
-      $resp = array ();
+      $resp = [];
       foreach ($_SESSION['glpiprofiles'] as $id => $prof) {
-         $resp[] = array ('id'      => $id,
-                          'name'    => $prof['name'],
-                          'current' => ($id == $_SESSION['glpiactiveprofile']['id'] ? 1 : 0));
+         $resp[] = ['id'      => $id,
+                    'name'    => $prof['name'],
+                    'current' => ($id == $_SESSION['glpiactiveprofile']['id'] ? 1 : 0)];
       }
       return $resp;
    }
@@ -202,22 +201,22 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     * for an authenticated users
     *
     * @param $params array of option : ignored
-    * @param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return a response ready to be encode (ID + completename)
+    * @return array response ready to be encode (ID + completename)
    **/
    static function methodListMyEntities($params, $protocol) {
       global $DB;
 
-      if (isset($params['help'])) {
-         return array ('help' => 'bool,optional');
+     if (isset($params['help'])) {
+         return ['help' => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
       }
 
-      $resp = array ();
+      $resp = [];
 
       foreach ($_SESSION['glpiactiveprofile']['entities'] as $ent) {
          if ($ent['is_recursive']) {
@@ -226,38 +225,38 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
             $search = $ent['id'];
          }
          if ($ent['id'] == 0) {
-            $resp[0] = array ('id'           => 0,
-                              'name'         => __('Root entity'),
-                              'entities_id'  => 0,
-                              'completename' => __('Root entity'),
-                              'comment'      => '',
-                              'level'        => 0,
-                              'is_recursive' => $ent['is_recursive'],
-                              'current'      => (in_array(0,
-                                                          $_SESSION['glpiactiveentities']) ? 1 : 0));
+            $resp[0] = ['id'           => 0,
+                        'name'         => __('Root entity'),
+                        'entities_id'  => 0,
+                        'completename' => __('Root entity'),
+                        'comment'      => '',
+                        'level'        => 0,
+                        'is_recursive' => $ent['is_recursive'],
+                        'current'      => (in_array(0, $_SESSION['glpiactiveentities']) ? 1 : 0)];
          }
-         foreach ($DB->request('glpi_entities', array ('id' => $search)) as $data) {
-            $resp[$data['id']] = array('id'           => $data['id'],
-                                       'entities_id'  => $data['entities_id'],
-                                     'name'           => $data['name'],
-                                     'completename'   => $data['completename'],
-                                     'comment'        => $data['comment'], 
-                                     'level'          => $data['level'], 
-                                     'address'        => $data['address'], 
-                                     'postcode'       => $data['postcode'], 
-                                     'town'           => $data['town'], 
-                                     'state'          => $data['state'], 
-                                     'country'        => $data['country'], 
-                                     'website'        => $data['website'], 
-                                     'phonenumber'    => $data['phonenumber'], 
-                                     'fax'            => $data['fax'], 
-                                     'email'          => $data['email'], 
-                                     'notepad'        => $data['notepad'], 
-                                     'tag'            => $data['tag'], 
-                                       'is_recursive' => $ent['is_recursive'],
-                                       'current'      => (in_array($data['id'],
-                                                                   $_SESSION['glpiactiveentities'])
-                                                                        ? 1 : 0));
+         foreach ($DB->request('glpi_entities', ['id' => $search]) as $data) {
+            // More information than
+            $resp[$data['id']] = [
+               'id'              => $data['id'],
+               'entities_id'     => $data['entities_id'],
+               'name'            => $data['name'],
+               'completename'    => $data['completename'],
+               'comment'         => $data['comment'],
+               'level'           => $data['level'],
+               'address'         => $data['address'],
+               'postcode'        => $data['postcode'],
+               'town'            => $data['town'],
+               'state'           => $data['state'],
+               'country'         => $data['country'],
+               'website'         => $data['website'],
+               'phonenumber'     => $data['phonenumber'],
+               'fax'             => $data['fax'],
+               'email'           => $data['email'],
+               'notepad'         => $data['notepad'],
+               'tag'             => $data['tag'],
+               'is_recursive'    => $ent['is_recursive'],
+               'current'         => (in_array($data['id'], $_SESSION['glpiactiveentities']) ? 1 : 0)
+            ];
          }
       }
       return $resp;
@@ -269,17 +268,17 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     *
     * @param $params array of options
     *  - profile : ID of the new profile
-    * @param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return a response ready to be encode
+    * @return array response ready to be encode
     *  - ID
     *  - name of the new profile
    **/
    static function methodSetMyProfile($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array ('profile' => 'integer,mandatory',
-                       'help'    => 'bool,optional');
+         return ['profile' => 'integer,mandatory',
+                 'help'    => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -296,8 +295,8 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
           && count($_SESSION['glpiprofiles'][$id]['entities'])) {
 
          Session::changeProfile($id);
-         $resp = array ('id'   => $_SESSION['glpiactiveprofile']['id'],
-                        'name' => $_SESSION['glpiactiveprofile']['name']);
+         $resp = ['id'   => $_SESSION['glpiactiveprofile']['id'],
+                  'name' => $_SESSION['glpiactiveprofile']['name']];
       } else {
          return self::Error($protocol,WEBSERVICES_ERROR_BADPARAMETER, '', "profile=$id");
       }
@@ -308,17 +307,18 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
    /**
     * Change the current entity(ies) of a authenticated user
     *
+    * @param $protocol string, communication protocol used
     * @param $params array of options
     *  - entity : ID of the new entity or "all"
     *  - recursive : 1 to see children
-    * @return like plugin_webservices_method_listEntities
+    * @return array like plugin_webservices_method_listEntities
     */
    static function methodSetMyEntity($params, $protocol) {
 
       if (isset($params['help'])) {
-         return array ('entity'    => 'integer,mandatory',
-                       'recursive' => 'bool,optional',
-                       'help'      => 'bool,optional');
+         return ['entity'    => 'integer,mandatory',
+                 'recursive' => 'bool,optional',
+                 'help'      => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -351,25 +351,22 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       $current = session_id();
       $session = trim($session);
 
-      if (file_exists(GLPI_ROOT . "/config/config_path.php")) {
-         include_once (GLPI_ROOT . "/config/config_path.php");
-      }
-      if (!defined("GLPI_SESSION_DIR")) {
-         define("GLPI_SESSION_DIR", GLPI_ROOT . "/files/_sessions");
-      }
+      require_once GLPI_ROOT . '/inc/based_config.php';
 
-      if ($session!=$current && !empty($current)) {
-         session_destroy();
-      }
-      if ($session!=$current && !empty($session)) {
-         if (ini_get("session.save_handler")=="files") {
-            session_save_path(GLPI_SESSION_DIR);
+      if ($session != $current) {
+         if (!empty($current)) {
+            session_destroy();
          }
-         session_id($session);
-         session_start();
+         if (!empty($session)) {
+            if (ini_get("session.save_handler") == "files") {
+               session_save_path(GLPI_SESSION_DIR);
+            }
+            session_id($session);
+            session_start();
 
-         // Define current time for sync of action timing
-         $_SESSION["glpi_currenttime"] = date("Y-m-d H:i:s");
+            // Define current time for sync of action timing
+            $_SESSION["glpi_currenttime"] = date("Y-m-d H:i:s");
+         }
       }
    }
 
@@ -379,7 +376,7 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
     *
     * @param $method string method name
     * @param $params array the method parameters
-    * @param $protocol the communication protocol used
+    * @param $protocol string, communication protocol used
     *
     * @return array the method response
    **/
@@ -387,12 +384,12 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       global $DB, $WEBSERVICES_METHOD, $TIMER_DEBUG;
 
       // Don't display error in result
-      set_error_handler(array('Toolbox', 'userErrorHandlerNormal'));
+      set_error_handler(['Toolbox', 'userErrorHandlerNormal']);
       ini_set('display_errors', 'Off');
 
       $iptxt = (isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? $_SERVER["HTTP_X_FORWARDED_FOR"]
                                                         : $_SERVER["REMOTE_ADDR"]);
-      $ipnum = (strstr($iptxt, ':')===false ? ip2long($iptxt) : '');
+      $ipnum = (strstr($iptxt, ':') === false ? ip2long($iptxt) : '');
 
 
       if (isset($_SESSION["MESSAGE_AFTER_REDIRECT"])) {
@@ -434,7 +431,7 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
          }
 
          $deflate  = $debug = $log = false;
-         $entities = array ();
+         $entities = [];
          if (Session::getLoginUserID() && isset($_SESSION['glpiactiveentities'])) {
             $username = $_SESSION['glpiname']; // for log (no t for SQL request)
          }
@@ -465,6 +462,8 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
             $deflate = $data['deflate'];
          }
          $callname='';
+         $defserver = ini_get('zlib.output_compression');
+
          // Always log when connection denied
          if (!Session::getLoginUserID() && !count($entities)) {
             $resp = self::Error($protocol,1, __('Access denied'));
@@ -488,8 +487,6 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
                Toolbox::logInFile($log, __('Connection') . " ($username, $iptxt, $method)\n");
             }
 
-            $defserver = ini_get('zlib.output_compression');
-
             if ($deflate && !$defserver) {
                // Globally off, try to enable for this client
                // This only work on PHP > 5.3.0
@@ -503,18 +500,21 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
             if (!isset($WEBSERVICES_METHOD[$method])) {
                $resp = self::Error($protocol,2, "Unknown method ($method)");
                Toolbox::logInFile(LOGFILENAME, "Unknown method ($method)\n");
+
             } else if (is_callable($call=$WEBSERVICES_METHOD[$method], false, $callname)) {
+               // Call the required service
                $resp = call_user_func($WEBSERVICES_METHOD[$method], $params, $protocol);
+
                Toolbox::logInFile(LOGFILENAME,
-                                  "Execute method:$method ($protocol), function:$callname, ".
-                                  "duration:".$TIMER_DEBUG->getTime().", size:".
-                                  strlen(serialize($resp))."\n");
+                                  sprintf("Execute method: %s (%s), function: %s, duration: %s, size: %s\n",
+                                     $method, $protocol, $callname, $TIMER_DEBUG->getTime(), strlen(serialize($resp))));
             } else {
                $resp = self::Error($protocol, 3, "Unknown internal function for $method",
                                                 $protocol);
                Toolbox::logInFile(LOGFILENAME, "Unknown internal function for $method\n");
             }
          } // Allowed
+
          if ($debug) {
             Toolbox::logInFile(LOGFILENAME, __('Connection') . ": $username, $iptxt\n".
                                "Protocol: $protocol, Method: $method, Function: $callname\n".
@@ -534,4 +534,3 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       return $resp;
    }
 }
-?>

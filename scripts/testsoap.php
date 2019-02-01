@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: testsoap.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: testsoap.php 452 2018-03-16 15:51:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -42,7 +42,7 @@ chdir(dirname($_SERVER["SCRIPT_FILENAME"]));
 chdir("../../..");
 $url = "/" . basename(getcwd()) . "/plugins/webservices/soap.php";
 
-$args = array ();
+$args = [];
 if ($_SERVER['argc'] > 1) {
    for ($i = 1 ; $i < count($_SERVER['argv']) ; $i++) {
       $it           = explode("=", $argv[$i], 2);
@@ -87,14 +87,13 @@ echo "+ Calling '$method' on http://$host/$url\n";
 
 try {
    // Nouvelle instance de la classe soapClient
-   $client = new SoapClient(null, array('uri'      => 'http://' . $host . '/' . $url,
-                                        'location' => 'http://' . $host . '/' . $url));
+   $client = new SoapClient(null, ['uri'      => 'http://' . $host . '/' . $url,
+                                   'location' => 'http://' . $host . '/' . $url]);
 
    //Call the genericExecute method
-   $result = $client->__soapCall('genericExecute', array(new SoapParam($args, 'params')));
+   $result = $client->__soapCall('genericExecute', [new SoapParam($args, 'params')]);
    print_r($result);
 
 } catch (SoapFault $fault) {
    echo $fault;
 }
-?>

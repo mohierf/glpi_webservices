@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodcommon.class.php 412 2015-10-01 13:37:30Z yllen $
+ * @version $Id: methodcommon.class.php 460 2018-10-04 14:16:44Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,7 +21,7 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2015 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
  @link      https://forge.glpi-project.org/projects/webservices
@@ -42,6 +42,7 @@ define('WEBSERVICES_ERROR_NOTAUTHENTICATED', 13);
 define('WEBSERVICES_ERROR_BADPARAMETER',     14);
 define('WEBSERVICES_ERROR_FAILED',           15);
 define('WEBSERVICES_ERROR_NOTALLOWED',       16);
+define('WEBSERVICES_ERROR_NOTALLOWEDl',      17);
 
 define('WEBSERVICES_REGEX_DATETIME', '/^(19|20)\d{2}-(0|1)\d-[0-3]\d [0-2]\d:[0-5]\d:[0-5]\d$/');
 define('WEBSERVICES_REGEX_DATE',     '/^(19|20)\d{2}-(0|1)\d-[0-3]\d$/');
@@ -59,10 +60,10 @@ class PluginWebservicesMethodCommon {
       global $PLUGIN_HOOKS;
 
       if (isset($params['help'])) {
-         return array('help' => 'bool,optional');
+         return ['help' => 'bool,optional'];
       }
 
-      $resp = array('glpi' => GLPI_VERSION);
+      $resp = ['glpi' => GLPI_VERSION];
 
       $plugin = new Plugin();
       foreach ($PLUGIN_HOOKS['webservices'] as $name => $fct) {
@@ -78,12 +79,12 @@ class PluginWebservicesMethodCommon {
    /**
     * Build a XML-RPC Response with an error status
     *
-    * @param $protocol           the communication protocol used
+    * @param $protocol string, communication protocol used
     * @param $code      integer  value of the error code
     * @param $message   string   description of the error (default '')
     * @param $more      string   additional $message (default '')
     *
-    * @return an response (fault) ready to be encode
+    * @return array|SoapFault, response (fault) ready to be encode
    **/
    static function Error($protocol, $code, $message='', $more='') {
 
@@ -131,8 +132,8 @@ class PluginWebservicesMethodCommon {
             return new SoapFault((string)$code, $message);
 
          default :
-            return array("faultCode"   => intval($code),
-                         "faultString" => $message);
+            return ["faultCode"   => intval($code),
+                    "faultString" => $message];
       }
    }
 
@@ -142,9 +143,14 @@ class PluginWebservicesMethodCommon {
       if (isset($_SESSION["MESSAGE_AFTER_REDIRECT"])
           && !empty($_SESSION["MESSAGE_AFTER_REDIRECT"])) {
 
-         $msg = Html::clean($_SESSION["MESSAGE_AFTER_REDIRECT"]);
-         $_SESSION["MESSAGE_AFTER_REDIRECT"]="";
-         return $msg;
+         $ret = "";
+         foreach ($_SESSION["MESSAGE_AFTER_REDIRECT"] as $type => $msgs) {
+            foreach ($msgs as $msg) {
+               $ret .= Html::clean($msg)."\n";
+            }
+         }
+         $_SESSION["MESSAGE_AFTER_REDIRECT"] = [];
+         return $ret;
       }
       return '';
    }
@@ -163,20 +169,20 @@ class PluginWebservicesMethodCommon {
 
 
    /**
-    * This method return the list of all method
+    * This method return the list of all methods
     *
-    * TODO: to be filter for the client rights
+    * TODO: to be filtered for the client rights
     *
     * @param $params    array of option : ignored
-    * @param $protocol        the communication protocol used
+    * @param $protocol  string, communication protocol used
     *
-    * @return an response ready to be encode
+    * @return array, response ready to be encode
    **/
    static function methodList($params, $protocol) {
       global $WEBSERVICES_METHOD;
 
       if (isset($params['help'])) {
-         return array('help' => 'bool,optional');
+         return ['help' => 'bool,optional'];
       }
       return $WEBSERVICES_METHOD;
    }
@@ -186,21 +192,20 @@ class PluginWebservicesMethodCommon {
     * This method return GLPI status (same as status.php)
     *
     * @param $params    array of option : ignored
-    * @param $protocol        the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return an response ready to be encode
+    * @return array, response ready to be encode
    **/
    static function methodStatus($params, $protocol) {
-      global $DB;
 
       if (isset($params['help'])) {
-         return array('help' => 'bool,optional');
+         return ['help' => 'bool,optional'];
       }
 
-      $resp       = array ();
+      $resp       = [];
       $ok_master  = true;
       $ok_slave   = true;
-      $ok         = true;
+//      $ok         = true;
 
       // Check slave server connection
       if (DBConnection::isDBSlaveActive()) {
@@ -208,7 +213,7 @@ class PluginWebservicesMethodCommon {
          if (is_array($DBslave->dbhost)) {
             $hosts = $DBslave->dbhost;
          } else {
-            $hosts = array($DBslave->dbhost);
+            $hosts = [$DBslave->dbhost];
          }
 
          foreach ($hosts as $num => $name) {
@@ -285,18 +290,18 @@ class PluginWebservicesMethodCommon {
     * This method return the entities list for the client
     *
     * @param $params    array of option : ignored
-    * @param $protocol        the communication protocol used
+    * @param $protocol string, communication protocol used
     *
-    * @return an response ready to be encode (ID + completename)
+    * @return array, response ready to be encode (ID + completename)
    **/
    static function methodListEntities($params, $protocol) {
       global $DB, $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('count' => 'bool,optional',
-                      'start' => 'integer,optional',
-                      'limit' => 'integer,optional',
-                      'help'  => 'bool,optional');
+         return ['count' => 'bool,optional',
+                 'start' => 'integer,optional',
+                 'limit' => 'integer,optional',
+                 'help'  => 'bool,optional'];
       }
 
       // Should never occurs, just to show howto to handle an error
@@ -304,7 +309,7 @@ class PluginWebservicesMethodCommon {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTFOUND);
       }
 
-      $resp = array ();
+      $resp = [];
 
       // Count only
       if (isset($params['count'])) {
@@ -323,33 +328,35 @@ class PluginWebservicesMethodCommon {
 
       // Root entity
       if (isset($_SESSION['glpiactiveentities'][0]) && !$start) {
-         $resp[] = array('id'           => 0,
-                         'completename' => __('Root entity'));
+         $resp[] = ['id'           => 0,
+                    'completename' => __('Root entity')];
          $limit--;
       }
 
       // Other allowed entities
-      foreach ($DB->request("glpi_entities", array('id'    => $_SESSION['glpiactiveentities'],
-                                                   'ORDER' => 'completename',
-                                                   'START' => $start,
-                                                   'LIMIT' => $limit)) as $entity) {
-         $resp[] = array('id'             => $entity['id'],
-                         'name'           => $entity['name'],
-                         'completename'   => $entity['completename'],
-                         'comment'        => $entity['comment'], 
-                         'level'          => $entity['level'], 
-                         'address'        => $entity['address'], 
-                         'postcode'       => $entity['postcode'], 
-                         'town'           => $entity['town'], 
-                         'state'          => $entity['state'], 
-                         'country'        => $entity['country'], 
-                         'website'        => $entity['website'], 
-                         'phonenumber'    => $entity['phonenumber'], 
-                         'fax'            => $entity['fax'], 
-                         'email'          => $entity['email'], 
-                         'notepad'        => $entity['notepad'], 
-                         'tag'            => $entity['tag'], 
-                         );
+      foreach ($DB->request("glpi_entities", ['WHERE' => ['id' => $_SESSION['glpiactiveentities']],
+                                              'ORDER' => 'completename',
+                                              'START' => $start,
+                                              'LIMIT' => $limit]) as $entity) {
+         // Specific - provide more information than only id and completename!
+         $resp[] = [
+            'id'             => $entity['id'],
+            'name'           => $entity['name'],
+            'completename'   => $entity['completename'],
+            'comment'        => $entity['comment'],
+            'level'          => $entity['level'],
+            'address'        => $entity['address'],
+            'postcode'       => $entity['postcode'],
+            'town'           => $entity['town'],
+            'state'          => $entity['state'],
+            'country'        => $entity['country'],
+            'website'        => $entity['website'],
+            'phonenumber'    => $entity['phonenumber'],
+            'fax'            => $entity['fax'],
+            'email'          => $entity['email'],
+            'notepad'        => $entity['notepad'],
+            'tag'            => $entity['tag']
+         ];
       }
 
       return $resp;
@@ -359,15 +366,13 @@ class PluginWebservicesMethodCommon {
    /**
     * This method manage upload of files into GLPI
     *
-    * @param $params          parameters
-    * @param $protocol        the protocol used for remote call
-    * @param $filename        name of the file on the filesystem
-    * @param $document_name   name of the document into glpi
-    * @param $filepath        path of the file on the filesystem
+    * @param $params          array of parameters
+    * @param $protocol        string   protocol used for remote call
+    * @param $filepath        string   path of the file on the filesystem
     *
-    * @return true or an Error
+    * @return array|boolean if an error, or boolean true
    **/
-   static function uploadDocument($params, $protocol, $filename, $document_name, $filepath) {
+   static function uploadDocument($params, $protocol, $filepath) {
 
       if (!isset($params['uri']) && !isset($params['base64'])) {
          return self::Error($protocol, WEBSERVICES_ERROR_MISSINGPARAMETER, '','uri or base64');
@@ -388,7 +393,7 @@ class PluginWebservicesMethodCommon {
 
       $size = file_put_contents($filepath, $content);
       if (!$size) {
-         return self::Error($protocol, WEBSERVICES_ERROR_FAILED, '', $filename);
+         return self::Error($protocol, WEBSERVICES_ERROR_FAILED, '', $filepath);
       }
 
       return true;
@@ -400,23 +405,23 @@ class PluginWebservicesMethodCommon {
     *
     * @param $params array of the needed parameters
     * @param $output array which contains the data to be sent to the client
-    *
-    * @return nothing
    **/
-   static function formatDataForOutput($params=array(), &$output) {
+   static function formatDataForOutput($params, &$output) {
 
-      $blacklisted_fields = array('items_id');
+      $dbu = new DbUtils();
 
-      $p['searchOptions'] = array();
-      $p['data']          = array();
-      $p['options']       = array();
+      $blacklisted_fields = ['items_id'];
+
+      $p['searchOptions'] = [];
+      $p['data']          = [];
+      $p['options']       = [];
       $p['subtype']       = false;
 
       foreach ($params as $key => $value) {
          $p[$key] = $value;
       }
 
-      $p['table']          = getTableForItemType($p['options']['itemtype']);
+      $p['table']          = $dbu->getTableForItemType($p['options']['itemtype']);
       $p['show_label']     = $p['options']['show_label'];
       $p['show_name']      = $p['options']['show_name'];
       $p['return_fields']  = $p['options']['return_fields'];
@@ -426,7 +431,7 @@ class PluginWebservicesMethodCommon {
       $p['searchOptions'][999]['linkfield']   = 'id';
       $p['searchOptions'][999]['name']        = __('Login');
 
-      $tmp = array();
+      $tmp = [];
       foreach($p['searchOptions'] as $id => $option) {
          if (isset($option['table'])) {
             if (!isset($option['linkfield']) || empty($option['linkfield'])) {
@@ -477,10 +482,11 @@ class PluginWebservicesMethodCommon {
                                break;
 
                             case 'itemlink':
+                               /* @var $obj CommonDBTM */
                                   if (isset($option['itemlink_type'])) {
                                      $obj = new $option['itemlink_type']();
                                   } else {
-                                     $itemtype = getItemTypeForTable($option['table']);
+                                     $itemtype = $dbu->getItemTypeForTable($option['table']);
                                      $obj = new $itemtype();
                                   }
                                   $obj->getFromDB($p['data'][$linkfield]);
@@ -489,7 +495,7 @@ class PluginWebservicesMethodCommon {
                                break;
 
                             case 'itemtype':
-                               if ($obj = getItemForItemtype($p['data'][$linkfield])) {
+                               if ($obj = $dbu->getItemForItemtype($p['data'][$linkfield])) {
                                   $tmp[$option_name] = $obj->getTypeName();
                                }
                                break;
@@ -518,21 +524,21 @@ class PluginWebservicesMethodCommon {
    /**
     * return the content of hardcoded dropdown
     *
-    * @param $name of the dropdown
+    * @param $name string name f the dropdown
     *
     * @return array (or false if unknown name)
    **/
    private static function listSpecialDropdown($name='') {
       global $CFG_GLPI;
 
-      $resp = array();
+      $resp = [];
 
       switch (strtolower($name)) {
          case 'ticketstatus' :
             $tab = Ticket::getAllStatusArray();
             foreach ($tab as $id => $label) {
-               $resp[] = array('id'    => $id,
-                               'name'  => $label);
+               $resp[] = ['id'    => $id,
+                          'name'  => $label];
             }
             break;
 
@@ -540,8 +546,8 @@ class PluginWebservicesMethodCommon {
             for ($i=1 ; $i<=5 ; $i++) {
                if (($i == 3)
                    || ($CFG_GLPI['urgency_mask'] & (1<<$i))) {
-                  $resp[] = array('id'    => $i,
-                                  'name'  => Ticket::getUrgencyName($i));
+                  $resp[] = ['id'    => $i,
+                             'name'  => Ticket::getUrgencyName($i)];
                }
             }
             break;
@@ -550,39 +556,39 @@ class PluginWebservicesMethodCommon {
             for ($i=1 ; $i<=5 ; $i++) {
                if (($i == 3)
                    || ($CFG_GLPI['impact_mask'] & (1<<$i))) {
-                  $resp[] = array('id'    => $i,
-                                  'name'  => Ticket::getImpactName($i));
+                  $resp[] = ['id'    => $i,
+                             'name'  => Ticket::getImpactName($i)];
                }
             }
             break;
 
          case 'tickettype' :
-            foreach (array(Ticket::INCIDENT_TYPE, Ticket::DEMAND_TYPE) as $type) {
-               $resp[] = array('id'    => $type,
-                               'name'  => Ticket::getTicketTypeName($type));
+            foreach ([Ticket::INCIDENT_TYPE, Ticket::DEMAND_TYPE] as $type) {
+               $resp[] = ['id'    => $type,
+                          'name'  => Ticket::getTicketTypeName($type)];
             }
             break;
 
          case 'ticketpriority' :
             for ($i=1 ; $i<=5 ; $i++) {
-               $resp[] = array('id'    => $i,
-                               'name'  => Ticket::getPriorityName($i));
+               $resp[] = ['id'    => $i,
+                          'name'  => Ticket::getPriorityName($i)];
             }
             break;
 
          case 'ticketglobalvalidation' :
             $tab = TicketValidation::getAllStatusArray(false, true);
             foreach ($tab as $id => $label) {
-               $resp[] = array('id'    => $id,
-                               'name'  => $label);
+               $resp[] = ['id'    => $id,
+                          'name'  => $label];
             }
             break;
 
          case 'ticketvalidationstatus' :
             $tab = TicketValidation::getAllStatusArray();
             foreach ($tab as $id => $label) {
-               $resp[] = array('id'    => $id,
-                               'name'  => $label);
+               $resp[] = ['id'    => $id,
+                          'name'  => $label];
             }
             break;
 
@@ -598,23 +604,25 @@ class PluginWebservicesMethodCommon {
     * for an authenticated user
     *
     * @param $params    array of options (dropdown, id, parent, name)
-    * @param $protocol        the commonication protocol used
+    * @param $protocol  string, commonication protocol used
     *
     * @return array of hashtable
    **/
    static function methodListDropdownValues($params, $protocol) {
-      global $DB, $CFG_GLPI;
+      global $DB;
 
       if (isset($params['help'])) {
-         return array('dropdown' => 'string,mandatory',
-                      'id'       => 'integer,optional',
-                      'parent'   => 'integer,optional',
-                      'criteria' => 'string, optional',
-                      'name'     => 'string,optional',
-                      'help'     => 'bool,optional',
-                      'start'    => 'integer,optional',
-                      'limit'    => 'integer,optional');
+         return ['dropdown' => 'string,mandatory',
+                 'id'       => 'integer,optional',
+                 'parent'   => 'integer,optional',
+                 'criteria' => 'string, optional',
+                 'name'     => 'string,optional',
+                 'help'     => 'bool,optional',
+                 'start'    => 'integer,optional',
+                 'limit'    => 'integer,optional'];
       }
+
+      $dbu = new DbUtils();
 
       if (!Session::getLoginUserID()) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTAUTHENTICATED);
@@ -630,12 +638,12 @@ class PluginWebservicesMethodCommon {
       }
 
       if (class_exists($type=$params['dropdown'])) {
-         $table = getTableForItemType($type);
-      } else if (TableExists($table='glpi_' . $params['dropdown'])) {
-         $type = getItemTypeForTable($table);
+         $table = $dbu->getTableForItemType($type);
+      } else if ($DB->tableExists($table='glpi_' . $params['dropdown'])) {
+         $type = $dbu->getItemTypeForTable($table);
       }
 
-      if (!($item = getItemForItemtype($type))) {
+      if (!($item = $dbu->getItemForItemtype($type))) {
          return self::Error($protocol, WEBSERVICES_ERROR_BADPARAMETER, '', $params['dropdown']);
       }
 
@@ -655,8 +663,8 @@ class PluginWebservicesMethodCommon {
       }
 
       // Minimal visible fields
-      $fields = array ('name', 'completename', 'comment', 'entities_id', 'locations_id', 'is_recursive',
-                       'is_incident', 'is_request', 'is_uploadable', 'ext');
+      $fields = ['name', 'completename', 'comment', 'entities_id', 'locations_id', 'is_recursive',
+                       'is_incident', 'is_request', 'is_uploadable', 'ext'];
       $fields[] = getForeignKeyFieldForTable($table);
 
       $query = "SELECT `id`";
@@ -674,7 +682,7 @@ class PluginWebservicesMethodCommon {
       }
 
       if ($item->isEntityAssign()) {
-         $query .= getEntitiesRestrictRequest(" AND ", $table, '', '', $item->maybeRecursive());
+         $query .= $dbu->getEntitiesRestrictRequest(" AND ", $table, '', '', $item->maybeRecursive());
       }
       if (isset($params['parent'])
           && is_numeric($params['parent'])
@@ -688,14 +696,9 @@ class PluginWebservicesMethodCommon {
          $query .= " AND `is_helpdeskvisible` ";
       }
       if (isset($params['criteria'])
-          && $params['criteria']) {
-         if ($item->isField('is_'.$params['criteria'])) {
-            $query .= " AND `is_".$params['criteria']."` ";
-         } else {
-            if (isset($params['value'])) {
-               $query .= " AND `".$params['criteria']."`='".$params['value']."'";
-            }
-         }
+          && $params['criteria']
+          && $item->isField('is_'.$params['criteria'])) {
+         $query .= " AND `is_".$params['criteria']."` ";
       }
       if (isset($params['name'])) {
          if ($item instanceof CommonTreeDropdown) {
@@ -706,7 +709,7 @@ class PluginWebservicesMethodCommon {
       }
       $query.= " LIMIT $start,$limit";
 
-      $resp = array ();
+      $resp = [];
       foreach ($DB->request($query) as $data) {
          $resp[] = $data;
       }
@@ -727,6 +730,8 @@ class PluginWebservicesMethodCommon {
    static function checkUserRights($user, $right, $valright, $entity) {
       global $DB;
 
+      $dbu = new DbUtils();
+
       $query = "SELECT `glpi_profilerights`.`rights`
                 FROM `glpi_profilerights`
                 LEFT JOIN `glpi_profiles`
@@ -736,15 +741,15 @@ class PluginWebservicesMethodCommon {
                 WHERE `glpi_profiles_users`.`users_id` = '$user'
                       AND `glpi_profilerights`.`name` = '$right'
                       AND (`glpi_profilerights`.`rights` & ". $valright.") ".
-                      getEntitiesRestrictRequest(" AND ", "glpi_profiles_users", '', $entity, true);
+                      $dbu->getEntitiesRestrictRequest(" AND ", "glpi_profiles_users", '', $entity, true);
 
-      if ($result = $DB->query($query)) {
-         if ($DB->numrows($result)) {
+      if ($result = $DB->request($query)) {
+         if (count($result)) {
             return true;
          }
       }
       return false;
 
    }
+
 }
-?>

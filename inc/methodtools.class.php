@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: methodtools.class.php 396 2014-11-23 18:46:25Z yllen $
+ * @version $Id: methodtools.class.php 452 2018-03-16 15:51:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+  @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -42,19 +42,19 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
     * for an authenticated user (or anonymous if allowed from config)
     *
     * @param $params array of options
-    * @param $protocol the commonication protocol used
+    * @param $protocol string - the commonication protocol used
    **/
    static function methodListKnowBaseItems($params, $protocol) {
       global $DB, $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('start'         => 'integer,optional',
-                      'limit'         => 'integer,optional',
-                      'contains'      => 'string,optional',
-                      'category'      => 'string,optional',
-                      'faq'           => 'bool,optional',
-                      'type'          => 'string,optionnal',
-                      'help'          => 'bool,optional');
+         return ['start'         => 'integer,optional',
+                 'limit'         => 'integer,optional',
+                 'contains'      => 'string,optional',
+                 'category'      => 'string,optional',
+                 'faq'           => 'bool,optional',
+                 'type'          => 'string,optionnal',
+                 'help'          => 'bool,optional'];
       }
 
       if (!Session::getLoginUserID()) {
@@ -80,18 +80,18 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
       }
 
       if (!isset($params['type'])) {
-         $params['type'] == 'search';
+         $params['type'] = 'search';
       }
 
-      $query = KnowbaseItem::getListRequest(array('faq'      =>  $params['faq'],
-                                                  'contains' => addslashes($params['contains']),
-                                                  'knowbaseitemcategories_id'
-                                                             => $params['category']),
-                                                   $params['type']);
+      $query = KnowbaseItem::getListRequest(['faq'             =>  $params['faq'],
+                                             'contains'        => addslashes($params['contains']),
+                                             'knowbaseitemcategories_id'
+                                                               => $params['category']],
+                                             $params['type']);
 
-      $resp = array ();
+      $resp = [];
       if (isset($params['count'])) {
-         $resp['count'] = $DB->numrows($DB->query($query));
+         $resp['count'] = count($DB->request($query));
       } else {
          $start = 0;
          $limit = $CFG_GLPI["list_limit_max"];
@@ -122,7 +122,7 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
     * @param   $item    Object
     * @param   $id2name Boolean
     *
-    * @return Array of documents
+    * @return array of documents
     */
    static function getDocForItem($item, $id2name=false) {
       global $DB;
@@ -139,7 +139,7 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
                                 WHERE `itemtype` = '".$item->getType()."'
                                       AND `items_id` = '".$item->getID()."')";
 
-      $resp = array();
+      $resp = [];
       foreach ($DB->request($query) as $data) {
          if ($id2name) {
             $data['users_name']
@@ -147,6 +147,8 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
             $data['documentcategories_name']
                = Html::clean(Dropdown::getDropdownName('glpi_documentcategories',
                                                        $data['documentcategories_id']));
+            $data['entities_name']
+               = Html::clean(Dropdown::getDropdownName('glpi_entities', $data['entities_id']));
          }
          $resp[] = $data;
       }
@@ -160,18 +162,20 @@ class PluginWebservicesMethodTools extends PluginWebservicesMethodCommon {
     * for an authenticated user (or anonymous if allowed from config)
     *
     * @param $params array of options
-    * @param $protocol the commonication protocol used
+    * @param $protocol string - commonication protocol used
+    *
+    * @return array
    **/
    static function methodGetKnowBaseItem($params, $protocol) {
-      global $DB, $CFG_GLPI;
+//      global $DB, $CFG_GLPI;
 
       if (isset($params['help'])) {
-         return array('id'      => 'integer,mandatory',
-                      'help'    => 'bool,optional');
+         return ['id'      => 'integer,mandatory',
+                 'help'    => 'bool,optional'];
       }
 
       $kb = new KnowbaseItem();
-      if (!Session::haveRightsOr('knowbase', array(READ, KnowbaseItem::READFAQ))) {
+      if (!Session::haveRightsOr('knowbase', [READ, KnowbaseItem::READFAQ])) {
          return self::Error($protocol, WEBSERVICES_ERROR_NOTALLOWED);
       }
 

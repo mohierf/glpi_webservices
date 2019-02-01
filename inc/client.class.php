@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: client.class.php 397 2014-11-29 23:54:21Z ddurieux $
+ * @version $Id: client.class.php 465 2018-11-29 14:50:19Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -36,7 +36,7 @@ if (!defined('GLPI_ROOT')) {
 
 class PluginWebservicesClient extends CommonDBTM {
 
-   public $dohistory        = true;
+   public $dohistory = true;
 
    static $rightname = 'config';
 
@@ -60,12 +60,12 @@ class PluginWebservicesClient extends CommonDBTM {
    }
 
 
-   function defineTabs($options=array()) {
+   function defineTabs($options=[]) {
 
-      $ong = array();
-      $this->addDefaultFormTab($ong);
-      $this->addStandardTab(__CLASS__, $ong, $options);
-      $this->addStandardTab('Log', $ong, $options);
+      $ong = [];
+      $this->addDefaultFormTab($ong)
+         ->addStandardTab(__CLASS__, $ong, $options)
+         ->addStandardTab('Log', $ong, $options);
 
       return $ong;
    }
@@ -128,7 +128,7 @@ class PluginWebservicesClient extends CommonDBTM {
    }
 
 
-   function showForm ($ID, $options=array()) {
+   function showForm ($ID, $options=[]) {
 
       $this->initForm($ID, $options);
       $this->showFormHeader($options);
@@ -148,7 +148,7 @@ class PluginWebservicesClient extends CommonDBTM {
 
       echo "<tr class='tab_bg_1'>";
       echo "<td>".__('Compression enabled', 'webservices')."</td><td>";
-      Dropdown::showYesNo("deflate",$this->fields["deflate"])."</td></tr>";
+      Dropdown::showYesNo("deflate",$this->fields["deflate"]);
       echo "<tr><td></td><td><i>". nl2br("Global configuration : edit the bundled .htaccess\n".
                                          "Dynamic deactivation (by client) available\n".
                                          "Dynamic activation requires > 5.3.0\n", "webservices");
@@ -156,10 +156,10 @@ class PluginWebservicesClient extends CommonDBTM {
 
       echo "<tr class='tab_bg_1'>";
       echo "<td >".__('Log connections', 'webservices')."</td><td>";
-      Dropdown::showFromArray("do_log", array(0 => __('No'),
-                                              1 => __('Historical'),
-                                              2 => _n('Log', 'Logs', 2)),
-                              array('value' => $this->fields["do_log"]));
+      Dropdown::showFromArray("do_log", [0 => __('No'),
+                                         1 => __('Historical'),
+                                         2 => _n('Log', 'Logs', 2)],
+                              ['value' => $this->fields["do_log"]]);
       echo "</td></tr>";
 
       echo "<tr class='tab_bg_1'>";
@@ -204,6 +204,8 @@ class PluginWebservicesClient extends CommonDBTM {
    function showMethods() {
       global $WEBSERVICES_METHOD, $CFG_GLPI;
 
+      $dbu = new DbUtils();
+
       echo "<div class='center'><br><table class='tab_cadre_fixehov'>";
       echo "<tr><th colspan='4'>".__('Method list - defined and allowed by this rule', 'webservices').
            "</th></tr>";
@@ -213,12 +215,12 @@ class PluginWebservicesClient extends CommonDBTM {
            "<th>".__('Function is available', 'webservices')."</th></tr>";
 
       // Allow all plugins to register their methods
-      $WEBSERVICES_METHOD = array();
+      $WEBSERVICES_METHOD = [];
       Plugin::doHook("webservices");
 
       foreach ($WEBSERVICES_METHOD as $method => $function) {
          // Display if MySQL REGEXP match
-         if (countElementsInTable($this->getTable(), "ID='".$this->fields['id'].
+         if ($dbu->countElementsInTable($this->getTable(), "ID='".$this->fields['id'].
                                   "' AND '".addslashes($method)."' REGEXP pattern")>0) {
             $result = $function;
             if (is_array($function)) {
@@ -244,47 +246,56 @@ class PluginWebservicesClient extends CommonDBTM {
    }
 
 
-   function getSearchOptions() {
+   function rawSearchOptions() {
 
-      $tab = array();
-      $tab['common']             = __('Web Services', 'webservices');
+      $tab     = [];
 
-      $tab[1]['table']           = $this->getTable();
-      $tab[1]['field']           = 'name';
-      $tab[1]['name']            = __('Name');
-      $tab[1]['datatype']        = 'itemlink';
+      $tab[]   = ['id'              => 'common',
+                  'name'            =>  __('Web Services', 'webservices')];
 
-      $tab[3]['table']           = $this->getTable();
-      $tab[3]['field']           = 'comment';
-      $tab[3]['name']            = __('Comments');
-      $tab[3]['datatype']        = 'text';
+      $tab[]   = ['id'              => 1,
+                  'table'           => $this->getTable(),
+                  'field'           => 'name',
+                  'name'            =>  __('Name'),
+                  'datatype'        => 'itemlink'];
 
-      $tab[8]['table']           = $this->getTable();
-      $tab[8]['field']           = 'is_active';
-      $tab[8]['name']            = __('Enabled services', 'webservices');
-      $tab[8]['datatype']        = 'bool';
+      $tab[]   = ['id'              => 3,
+                  'table'           =>  $this->getTable(),
+                  'field'           => 'comment',
+                  'name'            => __('Comments'),
+                  'datatype'        => 'text'];
 
-      $tab[9]['table']           = $this->getTable();
-      $tab[9]['field']           = 'do_log';
-      $tab[9]['name']            = __('Log connections', 'webservices');
+      $tab[]   = ['id'              => 8,
+                  'table'           => $this->getTable(),
+                  'field'           => 'is_active',
+                  'name'            => __('Enabled services', 'webservices'),
+                  'datatype'        => 'bool'];
 
-      $tab[10]['table']          = $this->getTable();
-      $tab[10]['field']          = 'deflate';
-      $tab[10]['name']           = __('Compression enabled', 'webservices');
-      $tab[10]['datatype']       = 'bool';
+      $tab[]   = ['id'              => 9,
+                  'table'           => $this->getTable(),
+                  'field'           => 'do_log',
+                  'name'            => __('Log connections', 'webservices')];
 
-      $tab[13]['table']          = $this->getTable();
-      $tab[13]['field']          = 'ip';
-      $tab[13]['name']           = __('IP');
-      $tab[13]['massiveaction']  = false;
+      $tab[]   = ['id'              => 10,
+                  'table'           => $this->getTable(),
+                  'field'           => 'deflate',
+                  'name'            => __('Compression enabled', 'webservices')];
 
-      $tab[14]['table']          = $this->getTable();
-      $tab[14]['field']          = 'ipv6';
-      $tab[14]['name']           = __('IPv6 address', 'webservices');
+      $tab[]   = ['id'              => 13,
+                  'table'           => $this->getTable(),
+                  'field'           => 'ip',
+                  'name'            => __('IP'),
+                  'massiveaction'   => false];
 
-      $tab[17]['table']          = $this->getTable();
-      $tab[17]['field']          = 'pattern';
-      $tab[17]['name']           = __('SQL pattern for services', 'webservices');
+      $tab[]   = ['id'              => 14,
+                  'table'           => $this->getTable(),
+                  'field'           => 'ipv6',
+                  'name'            => __('IPv6 address', 'webservices')];
+
+      $tab[]   = ['id'              => 17,
+                  'table'           => $this->getTable(),
+                  'field'           => 'pattern',
+                  'name'            => __('SQL pattern for services', 'webservices')];
 
       return $tab;
    }
@@ -297,7 +308,7 @@ class PluginWebservicesClient extends CommonDBTM {
 
       $migration->renameTable('glpi_plugin_webservices', $table);
 
-      if (TableExists('glpi_plugin_webservices_clients')) {
+      if ($DB->tableExists('glpi_plugin_webservices_clients')) {
 
          $migration->changeField($table, 'ID', 'id', 'autoincrement');
          $migration->changeField($table, 'FK_entities', 'entities_id', 'integer');
@@ -306,15 +317,15 @@ class PluginWebservicesClient extends CommonDBTM {
          $migration->changeField($table, 'comments', 'comment', 'text');
          $migration->changeField($table, 'FK_entities', 'entities_id', 'integer');
 
-         $migration->addField($table, 'deflate', 'bool', array('after' => 'is_active'));
-         $migration->addField($table, 'debug', 'bool', array('after' => 'do_log'));
+         $migration->addField($table, 'deflate', 'bool', ['after' => 'is_active']);
+         $migration->addField($table, 'debug', 'bool', ['after' => 'do_log']);
 
          $migration->addKey($table, 'entities_id');
 
          // Version 1.3.0
-         $opt = array('after'     => 'ip_end',
-                      'update'    => "'::1'",
-                      'condition' => "WHERE `ip_start`=INET_ATON('127.0.0.1')");
+         $opt = ['after'     => 'ip_end',
+                 'update'    => "'::1'",
+                 'condition' => "WHERE `ip_start`=INET_ATON('127.0.0.1')"];
          $migration->addField($table, 'ipv6', 'string', $opt);
 
       } else {
@@ -336,7 +347,7 @@ class PluginWebservicesClient extends CommonDBTM {
                   `comment` TEXT NULL ,
                   PRIMARY KEY (`id`),
                   KEY `entities_id` (`entities_id`)
-                ) ENGINE = MYISAM CHARACTER SET utf8 COLLATE utf8_unicode_ci ";
+                ) ENGINE = InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
          $DB->queryOrDie($sql, "SQL Error");
 
          $sql = "INSERT INTO
@@ -354,8 +365,8 @@ class PluginWebservicesClient extends CommonDBTM {
    static function uninstall() {
       global $DB;
 
-      $tables = array ('glpi_plugin_webservices',
-                       'glpi_plugin_webservices_clients');
+      $tables = ['glpi_plugin_webservices',
+                 'glpi_plugin_webservices_clients'];
 
       foreach ($tables as $table) {
          $query = "DROP TABLE IF EXISTS `$table`;";
@@ -377,13 +388,12 @@ class PluginWebservicesClient extends CommonDBTM {
    **/
    static function getMenuContent() {
 
-      $menu          = array();
+      $menu          = [];
       $menu['title'] = self::getMenuName();
       $menu['page']  = "/plugins/webservices/front/client.php";
 
       $menu['title']           = self::getMenuName();
       $menu['page']            = self::getSearchURL(false);
- //     $menu['links']['search'] = self::getSearchURL(false);
 
          if (Session::haveRight("config", UPDATE)) {
          $menu['links']['add'] = self::getFormURL(false);
@@ -393,4 +403,3 @@ class PluginWebservicesClient extends CommonDBTM {
 
 
 }
-?>

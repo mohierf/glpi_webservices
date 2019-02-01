@@ -1,6 +1,6 @@
 <?php
 /**
- * @version $Id: hook.php 395 2014-11-16 18:39:27Z yllen $
+ * @version $Id: hook.php 452 2018-03-16 15:51:45Z yllen $
  -------------------------------------------------------------------------
  LICENSE
 
@@ -21,10 +21,10 @@
 
  @package   Webservices
  @author    Nelly Mahu-Lasson
- @copyright Copyright (c) 2009-2014 Webservices plugin team
+ @copyright Copyright (c) 2009-2018 Webservices plugin team
  @license   AGPL License 3.0 or (at your option) any later version
             http://www.gnu.org/licenses/agpl-3.0-standalone.html
- @link      https://forge.indepnet.net/projects/webservices
+ @link      https://forge.glpi-project.org/projects/webservices
  @link      http://www.glpi-project.org/
  @since     2009
  --------------------------------------------------------------------------
@@ -35,102 +35,105 @@ function plugin_webservices_registerMethods() {
 
    // Not authenticated method
    $WEBSERVICES_METHOD['glpi.test']
-                              = array('PluginWebservicesMethodCommon','methodTest');
+                              = ['PluginWebservicesMethodCommon','methodTest'];
    $WEBSERVICES_METHOD['glpi.status']
-                              = array('PluginWebservicesMethodCommon','methodStatus');
+                              = ['PluginWebservicesMethodCommon','methodStatus'];
    $WEBSERVICES_METHOD['glpi.listAllMethods']
-                              = array('PluginWebservicesMethodCommon','methodList');
+                              = ['PluginWebservicesMethodCommon','methodList'];
    $WEBSERVICES_METHOD['glpi.listEntities']
-                              = array('PluginWebservicesMethodCommon','methodListEntities');
+                              = ['PluginWebservicesMethodCommon','methodListEntities'];
    $WEBSERVICES_METHOD['glpi.doLogin']
-                              = array('PluginWebservicesMethodSession','methodLogin');
+                              = ['PluginWebservicesMethodSession','methodLogin'];
    $WEBSERVICES_METHOD['glpi.listKnowBaseItems']
-                              = array('PluginWebservicesMethodTools','methodListKnowBaseItems');
+                              = ['PluginWebservicesMethodTools','methodListKnowBaseItems'];
    $WEBSERVICES_METHOD['glpi.getKnowBaseItem']
-                              = array('PluginWebservicesMethodTools','methodGetKnowBaseItem');
+                              = ['PluginWebservicesMethodTools','methodGetKnowBaseItem'];
    $WEBSERVICES_METHOD['glpi.getDocument']
-                              = array('PluginWebservicesMethodInventaire','methodGetDocument');
+                              = ['PluginWebservicesMethodInventaire','methodGetDocument'];
 
    // Authenticated method - Session
    $WEBSERVICES_METHOD['glpi.doLogout']
-                              = array('PluginWebservicesMethodSession','methodLogout');
+                              = ['PluginWebservicesMethodSession','methodLogout'];
    $WEBSERVICES_METHOD['glpi.getMyInfo']
-                              = array('PluginWebservicesMethodSession','methodGetMyInfo');
+                              = ['PluginWebservicesMethodSession','methodGetMyInfo'];
    $WEBSERVICES_METHOD['glpi.listMyProfiles']
-                              = array('PluginWebservicesMethodSession','methodListMyProfiles');
+                              = ['PluginWebservicesMethodSession','methodListMyProfiles'];
    $WEBSERVICES_METHOD['glpi.setMyProfile']
-                              = array('PluginWebservicesMethodSession','methodSetMyProfile');
+                              = ['PluginWebservicesMethodSession','methodSetMyProfile'];
    $WEBSERVICES_METHOD['glpi.listMyEntities']
-                              = array('PluginWebservicesMethodSession','methodListMyEntities');
+                              = ['PluginWebservicesMethodSession','methodListMyEntities'];
    $WEBSERVICES_METHOD['glpi.setMyEntity']
-                              = array('PluginWebservicesMethodSession','methodSetMyEntity');
+                              = ['PluginWebservicesMethodSession','methodSetMyEntity'];
 
    // Authenticated method - Others
    $WEBSERVICES_METHOD['glpi.listDropdownValues']
-                              = array('PluginWebservicesMethodCommon','methodListDropdownValues');
+                              = ['PluginWebservicesMethodCommon','methodListDropdownValues'];
    $WEBSERVICES_METHOD['glpi.listHelpdeskTypes']
-                              = array('PluginWebservicesMethodHelpdesk','methodListHelpdeskTypes');
+                              = ['PluginWebservicesMethodHelpdesk','methodListHelpdeskTypes'];
    $WEBSERVICES_METHOD['glpi.listHelpdeskItems']
-                              = array('PluginWebservicesMethodHelpdesk','methodListHelpdeskItems');
+                              = ['PluginWebservicesMethodHelpdesk','methodListHelpdeskItems'];
    $WEBSERVICES_METHOD['glpi.listTickets']
-                              = array('PluginWebservicesMethodHelpdesk','methodListTickets');
+                              = ['PluginWebservicesMethodHelpdesk','methodListTickets'];
    $WEBSERVICES_METHOD['glpi.listGroups']
-                              = array('PluginWebservicesMethodInventaire','methodListGroups');
+                              = ['PluginWebservicesMethodInventaire','methodListGroups'];
    $WEBSERVICES_METHOD['glpi.listUsers']
-                              = array('PluginWebservicesMethodInventaire','methodListUsers');
+                              = ['PluginWebservicesMethodInventaire','methodListUsers'];
 
-   //Inventory
+   // Inventory
    $WEBSERVICES_METHOD['glpi.listInventoryObjects']
-                              = array('PluginWebservicesMethodInventaire','methodListInventoryObjects');
+                              = ['PluginWebservicesMethodInventaire','methodListInventoryObjects'];
    $WEBSERVICES_METHOD['glpi.listObjects']
-                              = array('PluginWebservicesMethodInventaire','methodListObjects');
+                              = ['PluginWebservicesMethodInventaire','methodListObjects'];
    $WEBSERVICES_METHOD['glpi.getObject']
-                              = array('PluginWebservicesMethodInventaire','methodGetObject');
+                              = ['PluginWebservicesMethodInventaire','methodGetObject'];
 
    // Inventory : write methods
    $WEBSERVICES_METHOD['glpi.createObjects']
-                              = array('PluginWebservicesMethodInventaire','methodCreateObjects');
+                              = ['PluginWebservicesMethodInventaire','methodCreateObjects'];
    $WEBSERVICES_METHOD['glpi.deleteObjects']
-                              = array('PluginWebservicesMethodInventaire','methodDeleteObjects');
+                              = ['PluginWebservicesMethodInventaire','methodDeleteObjects'];
    $WEBSERVICES_METHOD['glpi.updateObjects']
-                              = array('PluginWebservicesMethodInventaire','methodUpdateObjects');
+                              = ['PluginWebservicesMethodInventaire','methodUpdateObjects'];
    $WEBSERVICES_METHOD['glpi.linkObjects']
-                              = array('PluginWebservicesMethodInventaire','methodLinkObjects');
+                              = ['PluginWebservicesMethodInventaire','methodLinkObjects'];
 
-   //Inventory : generic methods
+   //Inventor : generic methods
    $WEBSERVICES_METHOD['glpi.getInfocoms']
-                              = array('PluginWebservicesMethodInventaire','methodGetItemInfocoms');
+                              = ['PluginWebservicesMethodInventaire','methodGetItemInfocoms'];
    $WEBSERVICES_METHOD['glpi.getContracts']
-                              = array('PluginWebservicesMethodInventaire','methodGetItemContracts');
+                              = ['PluginWebservicesMethodInventaire','methodGetItemContracts'];
 
    //Inventory : computer
    $WEBSERVICES_METHOD['glpi.getNetworkports']
-                              = array('PluginWebservicesMethodInventaire','methodGetNetworkports');
+                              = ['PluginWebservicesMethodInventaire','methodGetNetworkports'];
    $WEBSERVICES_METHOD['glpi.getPhones']
-                              = array('PluginWebservicesMethodInventaire','methodGetPhones');
+                              = ['PluginWebservicesMethodInventaire','methodGetPhones'];
 
 
    //Helpdesk
    $WEBSERVICES_METHOD['glpi.getTicket']
-                              = array('PluginWebservicesMethodHelpdesk','methodGetTicket');
+                              = ['PluginWebservicesMethodHelpdesk','methodGetTicket'];
    $WEBSERVICES_METHOD['glpi.getHelpdeskConfiguration']
-                              = array('PluginWebservicesMethodHelpdesk','methodGetHelpdeskConfiguration');
+                              = ['PluginWebservicesMethodHelpdesk','methodGetHelpdeskConfiguration'];
    $WEBSERVICES_METHOD['glpi.createTicket']
-                              = array('PluginWebservicesMethodHelpdesk','methodCreateTicket');
+                              = ['PluginWebservicesMethodHelpdesk','methodCreateTicket'];
    $WEBSERVICES_METHOD['glpi.addTicketFollowup']
-                              = array('PluginWebservicesMethodHelpdesk','methodAddTicketFollowup');
+                              = ['PluginWebservicesMethodHelpdesk','methodAddTicketFollowup'];
    $WEBSERVICES_METHOD['glpi.addTicketDocument']
-                              = array('PluginWebservicesMethodHelpdesk','methodAddTicketDocument');
+                              = ['PluginWebservicesMethodHelpdesk','methodAddTicketDocument'];
    $WEBSERVICES_METHOD['glpi.addTicketObserver']
-                              = array('PluginWebservicesMethodHelpdesk','methodAddTicketObserver');
+                              = ['PluginWebservicesMethodHelpdesk','methodAddTicketObserver'];
    $WEBSERVICES_METHOD['glpi.setTicketSatisfaction']
-                              = array('PluginWebservicesMethodHelpdesk','methodsetTicketSatisfaction');
+                              = ['PluginWebservicesMethodHelpdesk','methodsetTicketSatisfaction'];
    $WEBSERVICES_METHOD['glpi.setTicketValidation']
-                              = array('PluginWebservicesMethodHelpdesk','methodsetTicketValidation');
+                              = ['PluginWebservicesMethodHelpdesk','methodsetTicketValidation'];
    $WEBSERVICES_METHOD['glpi.setTicketSolution']
-                              = array('PluginWebservicesMethodHelpdesk','methodsetTicketSolution');
+                              = ['PluginWebservicesMethodHelpdesk','methodsetTicketSolution'];
    $WEBSERVICES_METHOD['glpi.setTicketAssign']
-                              = array('PluginWebservicesMethodHelpdesk','methodsetTicketAssign');
+                              = ['PluginWebservicesMethodHelpdesk','methodsetTicketAssign'];
+   $WEBSERVICES_METHOD['glpi.addTicketTask']
+                              = ['PluginWebservicesMethodHelpdesk','methodAddTicketTask'];
+
 }
 
 
@@ -180,6 +183,8 @@ function plugin_webservices_giveItem($type,$ID,$data,$num) {
             }
          break;
    }
+
+   return '';
 }
 
 
@@ -217,7 +222,7 @@ function plugin_webservices_addWhere($link,$nott,$type,$ID,$val) {
 }
 
 
-function plugin_webservices_addOrderBy($type,$ID,$order,$key=0) {
+function plugin_webservices_addOrderBy($type, $ID, $order) {
 
    $searchopt  = &Search::getOptions($type);
    $table      = $searchopt[$ID]["table"];
@@ -235,8 +240,8 @@ function plugin_webservices_addOrderBy($type,$ID,$order,$key=0) {
 function cron_plugin_webservices() {
 
    Toolbox::logInFile('webservices', "cron called\n");
+   // todo: where does it exist?
    plugin_webservices_soap_create_wdsl();
    return 1;
 
 }
-?>
