@@ -80,7 +80,6 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       }
 
       $identificat = new Auth();
-
       if ($identificat->Login($params['login_name'], $params['login_password'], true)) {
          session_write_close();
          return (['id'        => Session::getLoginUserID(),
@@ -252,7 +251,6 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
                'phonenumber'     => $data['phonenumber'],
                'fax'             => $data['fax'],
                'email'           => $data['email'],
-               'notepad'         => $data['notepad'],
                'tag'             => $data['tag'],
                'is_recursive'    => $ent['is_recursive'],
                'current'         => (in_array($data['id'], $_SESSION['glpiactiveentities']) ? 1 : 0)
@@ -354,10 +352,10 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       require_once GLPI_ROOT . '/inc/based_config.php';
 
       if ($session != $current) {
-         if (!empty($current)) {
+         if (! empty($current)) {
             session_destroy();
          }
-         if (!empty($session)) {
+         if (! empty($session)) {
             if (ini_get("session.save_handler") == "files") {
                session_save_path(GLPI_SESSION_DIR);
             }
@@ -392,144 +390,142 @@ class PluginWebservicesMethodSession extends PluginWebservicesMethodCommon {
       $ipnum = (strstr($iptxt, ':') === false ? ip2long($iptxt) : '');
 
 
+      Toolbox::logInFile('webservices', "WS: $method\n".
+         "Parameters: ".(count($params) ? print_r($params, true) : "None\n"));
+
       if (isset($_SESSION["MESSAGE_AFTER_REDIRECT"])) {
          // Avoid to keep "info" message between call
-         $_SESSION["MESSAGE_AFTER_REDIRECT"]='';
+         $_SESSION["MESSAGE_AFTER_REDIRECT"] = [];
       }
 
       $plug = new Plugin();
-      if ($plug->isActivated('webservices')) {
-         if (isset($params['session'])) {
-            self::setSession($params['session']);
-         }
+      if (! $plug->isActivated('webservices')) {
+         return self::Error($protocol, 4, "Server not ready", $protocol);
+      }
 
-         // Build query for security check
-         $sql = "SELECT *
-                 FROM `glpi_plugin_webservices_clients`
-                 WHERE '" . addslashes($method) . "' REGEXP pattern
-                       AND `is_active` = '1' ";
-         if ($ipnum) {
-            $sql .= " AND (`ip_start` IS NULL
-                            OR (`ip_start` <= '$ipnum' AND `ip_end` >= '$ipnum'))";
-         } else {
-            $sql .= " AND `ipv6` = '".addslashes($iptxt)."'";
-         }
+      // Plugin is enabled
+      if (isset($params['session'])) {
+         self::setSession($params['session']);
+      }
 
-         if (isset($params["username"])) {
-            $username = addslashes($params["username"]);
-            $password = md5(isset($params["password"]) ? $params["password"] : '');
-
-            $sql     .= " AND (`username` IS NULL
-                               OR (`username` = '$username' AND `password` = '$password'))";
-
-            unset ($params["username"]);
-            unset ($params["password"]);
-
-         } else {
-            $username = 'anonymous';
-            $sql     .= " AND `username` IS NULL ";
-         }
-
-         $deflate  = $debug = $log = false;
-         $entities = [];
-         if (Session::getLoginUserID() && isset($_SESSION['glpiactiveentities'])) {
-            $username = $_SESSION['glpiname']; // for log (no t for SQL request)
-         }
-
-         foreach ($DB->request($sql) as $data) {
-            // Check matching rules
-
-            // Store entities for not authenticated user
-            if (!Session::getLoginUserID()) {
-               if ($data['is_recursive']) {
-                  foreach (getSonsOf("glpi_entities",$data['entities_id']) as $entity) {
-                     $entities[$entity] = $entity;
-                  }
-               } else {
-                  $entities[$data['entities_id']] = $data['entities_id'];
-               }
-            }
-
-            // Where to log
-            if ($data["do_log"] == 2) {
-               // Log to file
-               $log = LOGFILENAME;
-            } else if ($data["do_log"] == 1) {
-               // Log to History
-               $log = $data["id"];
-            }
-            $debug = $data['debug'];
-            $deflate = $data['deflate'];
-         }
-         $callname='';
-         $defserver = ini_get('zlib.output_compression');
-
-         // Always log when connection denied
-         if (!Session::getLoginUserID() && !count($entities)) {
-            $resp = self::Error($protocol,1, __('Access denied'));
-
-            // log to file (not macthing config to use history)
-            Toolbox::logInFile(LOGFILENAME,
-                               __('Access denied')." ($username, $iptxt, $method, $protocol)\n");
-         } else { // Allowed
-            if (!Session::getLoginUserID()) {
-               // TODO : probably more data should be initialized here
-               $_SESSION['glpiactiveentities'] = $entities;
-            }
-            // Log if configured
-            if (is_numeric($log)) {
-               $changes[0] = 0;
-               $changes[1] = "";
-               $changes[2] = __('Connection') . " ($username, $iptxt, $method, $protocol)";
-               Log::history($log, 'PluginWebservicesClient', $changes, 0,
-                            Log::HISTORY_LOG_SIMPLE_MESSAGE);
-            } else if ($log && !$debug) {
-               Toolbox::logInFile($log, __('Connection') . " ($username, $iptxt, $method)\n");
-            }
-
-            if ($deflate && !$defserver) {
-               // Globally off, try to enable for this client
-               // This only work on PHP > 5.3.0
-               ini_set('zlib.output_compression', 'On');
-            }
-            if (!$deflate && $defserver) {
-               // Globally on, disable for this client
-               ini_set('zlib.output_compression', 'Off');
-            }
-
-            if (!isset($WEBSERVICES_METHOD[$method])) {
-               $resp = self::Error($protocol,2, "Unknown method ($method)");
-               Toolbox::logInFile(LOGFILENAME, "Unknown method ($method)\n");
-
-            } else if (is_callable($call=$WEBSERVICES_METHOD[$method], false, $callname)) {
-               // Call the required service
-               $resp = call_user_func($WEBSERVICES_METHOD[$method], $params, $protocol);
-
-               Toolbox::logInFile(LOGFILENAME,
-                                  sprintf("Execute method: %s (%s), function: %s, duration: %s, size: %s\n",
-                                     $method, $protocol, $callname, $TIMER_DEBUG->getTime(), strlen(serialize($resp))));
-            } else {
-               $resp = self::Error($protocol, 3, "Unknown internal function for $method",
-                                                $protocol);
-               Toolbox::logInFile(LOGFILENAME, "Unknown internal function for $method\n");
-            }
-         } // Allowed
-
-         if ($debug) {
-            Toolbox::logInFile(LOGFILENAME, __('Connection') . ": $username, $iptxt\n".
-                               "Protocol: $protocol, Method: $method, Function: $callname\n".
-                               "Params: ".(count($params) ? print_r($params, true) : "none\n") .
-                               "Compression: Server:$defserver/" . ini_get('zlib.output_compression') .
-                               ", Config:$deflate, Agent:" .
-                               (isset($_SERVER['HTTP_ACCEPT_ENCODING'])
-                                             ? $_SERVER['HTTP_ACCEPT_ENCODING'] : '?') .
-                               "\nDuration: " .$TIMER_DEBUG->getTime().
-                               "\nResponse size: ".strlen(serialize($resp)).
-                               "\nResponse content: " .print_r($resp, true));
-         }
+      // Build query for security check
+      $sql = "SELECT * FROM `glpi_plugin_webservices_clients` WHERE '" . addslashes($method) . "' REGEXP pattern AND `is_active` = '1' ";
+      if ($ipnum) {
+         $sql .= " AND (`ip_start` IS NULL OR (`ip_start` <= '$ipnum' AND `ip_end` >= '$ipnum'))";
       } else {
-         $resp = self::Error($protocol,4, "Server not ready",$protocol);
-      } // Activated
+         $sql .= " AND `ipv6` = '".addslashes($iptxt)."'";
+      }
+      if (isset($params["username"])) {
+         $username = addslashes($params["username"]);
+         $password = md5(isset($params["password"]) ? $params["password"] : '');
+
+         $sql .= " AND (`username` IS NULL OR (`username` = '$username' AND `password` = '$password'))";
+
+         unset ($params["username"]);
+         unset ($params["password"]);
+      } else {
+         $username = 'anonymous';
+         $sql     .= " AND `username` IS NULL ";
+      }
+
+      $deflate = $debug = $log = false;
+      $entities = [];
+      if (Session::getLoginUserID() && isset($_SESSION['glpiactiveentities'])) {
+         $username = $_SESSION['glpiname']; // for log (no t for SQL request)
+      }
+
+      foreach ($DB->request($sql) as $data) {
+         // Check matching rules
+
+         // Store entities for not authenticated user
+         if (! Session::getLoginUserID()) {
+            if ($data['is_recursive']) {
+               foreach (getSonsOf("glpi_entities", $data['entities_id']) as $entity) {
+                  $entities[$entity] = $entity;
+               }
+            } else {
+               $entities[$data['entities_id']] = $data['entities_id'];
+            }
+         }
+
+         // Where to log
+         if ($data["do_log"] == 2) {
+            // Log to file
+            $log = LOGFILENAME;
+         } else if ($data["do_log"] == 1) {
+            // Log to History
+            $log = $data["id"];
+         }
+         $debug = $data['debug'];
+         $deflate = $data['deflate'];
+      }
+      $callname = '';
+      $defserver = ini_get('zlib.output_compression');
+
+      // Always log when connection denied
+      if (! Session::getLoginUserID() && ! count($entities)) {
+         $resp = self::Error($protocol,1, __('Access denied'));
+
+         // log to file (not matching config to use history)
+         Toolbox::logInFile(LOGFILENAME,
+                            __('Access denied')." ($username, $iptxt, $method, $protocol)\n");
+      } else {
+         // Access allowed
+         if (! Session::getLoginUserID()) {
+            // TODO : probably more data should be initialized here
+            $_SESSION['glpiactiveentities'] = $entities;
+         }
+
+         // Log if configured
+         if (is_numeric($log)) {
+            $changes[0] = 0;
+            $changes[1] = "";
+            $changes[2] = __('Connection') . " ($username, $iptxt, $method, $protocol)";
+            Log::history($log, 'PluginWebservicesClient', $changes, 0,
+                         Log::HISTORY_LOG_SIMPLE_MESSAGE);
+         } else if ($log && ! $debug) {
+            Toolbox::logInFile($log, __('Connection') . " ($username, $iptxt, $method)\n");
+         }
+
+         if ($deflate && ! $defserver) {
+            // Globally off, try to enable for this client
+            // This only work on PHP > 5.3.0
+            ini_set('zlib.output_compression', 'On');
+         }
+         if (! $deflate && $defserver) {
+            // Globally on, disable for this client
+            ini_set('zlib.output_compression', 'Off');
+         }
+
+         if (! isset($WEBSERVICES_METHOD[$method])) {
+            $resp = self::Error($protocol,2, "Unknown method ($method)");
+            Toolbox::logInFile(LOGFILENAME, "Unknown method ($method)\n");
+
+         } else if (is_callable($call=$WEBSERVICES_METHOD[$method], false, $callname)) {
+            // Call the required service
+            $resp = call_user_func($WEBSERVICES_METHOD[$method], $params, $protocol);
+
+            Toolbox::logInFile(LOGFILENAME,
+                               sprintf("Execute method: %s (%s), function: %s, duration: %s, size: %s\n",
+                                  $method, $protocol, $callname, $TIMER_DEBUG->getTime(), strlen(serialize($resp))));
+         } else {
+            $resp = self::Error($protocol, 3, "Unknown internal function for $method",
+                                             $protocol);
+            Toolbox::logInFile(LOGFILENAME, "Unknown internal function for $method\n");
+         }
+      } // Allowed
+
+      if ($debug) {
+         Toolbox::logInFile(LOGFILENAME, __('Connection') . ": $username, $iptxt\n".
+                            "Protocol: $protocol, Method: $method, Function: $callname\n".
+                            "Params: ".(count($params) ? print_r($params, true) : "none\n") .
+                            "Compression: Server:$defserver/" . ini_get('zlib.output_compression') .
+                            ", Config: $deflate, Agent: " .
+                            (isset($_SERVER['HTTP_ACCEPT_ENCODING']) ? $_SERVER['HTTP_ACCEPT_ENCODING'] : '?') .
+                            "\nDuration: " .$TIMER_DEBUG->getTime().
+                            "\nResponse size: ".strlen(serialize($resp)).
+                            "\nResponse content: " .print_r($resp, true));
+      }
 
       return $resp;
    }

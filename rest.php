@@ -43,16 +43,16 @@ if (! defined('GLPI_USE_CSRF_CHECK')) {
 // Specific - stop
 define('GLPI_ROOT', '../..');
 
+include (GLPI_ROOT . "/inc/includes.php");
+
 // define session_id before any other thing
 // Specific - $_POST
 if (isset($_GET['session']) || isset($_POST['session'])) {
    include_once ("inc/methodcommon.class.php");
    include_once ("inc/methodsession.class.php");
    $session = new PluginWebservicesMethodSession();
-   $session->setSession($_GET['session']);
+   $session->setSession(isset($_GET['session']) ? $_GET['session'] : $_POST['session']);
 }
-
-include (GLPI_ROOT . "/inc/includes.php");
 
 Plugin::load('webservices', true);
 
@@ -61,15 +61,22 @@ plugin_webservices_registerMethods();
 
 error_reporting(E_ALL);
 
-// Fred : begin CORS OPTIONS HTTP request ...
-// todo: check if really necessary!
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-   header('Access-Control-Allow-Origin: *');
-   header('Access-Control-Allow-Headers: Content-Type, Content-Range, Content-Disposition, Content-Description');
-   header("HTTP/1.0 200");
-   die("CORS headers");
-}
-// Fred : end ...
+// begin CORS OPTIONS HTTP request ...
+// - not necessary, configure this in hte Web server
+//if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+//   Toolbox::logInFile('webservices', "WS: CORS options");
+//
+//   header('Access-Control-Allow-Origin: *');
+//   header('Access-Control-Allow-Headers: Content-Type, Content-Range, Content-Disposition, Content-Description');
+//   header("HTTP/1.0 200");
+//   die("CORS headers");
+//}
+// end CORS OPTIONS HTTP request ...
+
+//Toolbox::logInFile('webservices', "WS: \n".
+//   "_SERVER: ".(count($_SERVER) ? print_r($_SERVER, true) : "none\n")
+//);
+//
 
 $params = $_GET;
 if (isset($_POST['method'])) {
@@ -94,6 +101,7 @@ if (empty($method)) {
 
 // Send UTF8 headers
 // Specific, set application/json rather than text/html!
+//header('Access-Control-Allow-Origin: *');
 header("Content-Type: application/json; charset=UTF-8");
 if (isset($_POST['callback'])) {
    echo $_POST['callback'] . '('.json_encode($resp).')';

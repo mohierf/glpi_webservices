@@ -91,23 +91,45 @@ if (empty($method) || !is_array($allparams)) {
 }
 
 $params = (isset($allparams[0]) && is_array($allparams[0]) ? $allparams[0] : []);
-if (isset($params['iso8859'])) {
-   $iso = true;
-   unset($params['iso8859']);
-} else {
-   $iso = false;
-}
+//$encoding = isset($params['encoding']) ? $params['encoding'] : 'utf-8';
+//if (isset($params['iso8859'])) {
+//   $iso = true;
+//   unset($params['iso8859']);
+//} else {
+//   $iso = false;
+//}
 
 $session = new PluginWebservicesMethodSession();
 $resp = $session->execute($method, $params, WEBSERVICE_PROTOCOL_XMLRPC);
 
 header("Content-type: text/xml");
 
-if ($iso) {
-   decodeFromUtf8Array($resp);
-   echo xmlrpc_encode_request(NULL, $resp, ['encoding' => 'ISO-8859-1']);
-} else {
-   // request without method is a response ;)
-   echo xmlrpc_encode_request(NULL, $resp, ['encoding' => 'UTF-8',
-                                            'escaping' => 'markup']);
-}
+//if ($iso) {
+//   decodeFromUtf8Array($resp);
+//   echo xmlrpc_encode_request(NULL, $resp, [
+//       'encoding' => $encoding,
+//       'verbosity' => 'newlines_only',
+//       'escaping' => 'markup'
+//   ]);
+//} else {
+//   // request without method is a response ;)
+//   echo xmlrpc_encode_request(NULL, $resp, [
+//       'encoding' => $encoding,
+//       'verbosity' => 'newlines_only',
+//       'escaping' => 'markup'
+//   ]);
+//}
+/*
+ * xmlrpc_encode_request options:
+ * - output_type: php, xml
+ * - verbosity: no_white_space, newlines_only, pretty
+ * - escaping: cdata, non-ascii, non-print, markup (peut être une chaîne avec une valeur ou un tableau avec plusieurs valeurs)
+ * - version: simple, xmlrpc, soap 1.1, auto
+ * - encoding: iso-8859-1, autres jeux de caractères supportés par iconv
+ */
+// request without method is a response ;)
+echo xmlrpc_encode_request(NULL, $resp, [
+    'encoding' => isset($params['encoding']) ? $params['encoding'] : 'utf-8',
+    'verbosity' => 'no_white_space',
+    'escaping' => 'markup'
+]);

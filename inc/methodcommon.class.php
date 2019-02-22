@@ -56,7 +56,7 @@ define('LOGFILENAME', 'webservices');
 
 class PluginWebservicesMethodCommon {
 
-   static function methodTest($params, $protocol) {
+   static function methodTest($params) {
       global $PLUGIN_HOOKS;
 
       if (isset($params['help'])) {
@@ -178,7 +178,7 @@ class PluginWebservicesMethodCommon {
     *
     * @return array, response ready to be encode
    **/
-   static function methodList($params, $protocol) {
+   static function methodList($params) {
       global $WEBSERVICES_METHOD;
 
       if (isset($params['help'])) {
@@ -192,11 +192,9 @@ class PluginWebservicesMethodCommon {
     * This method return GLPI status (same as status.php)
     *
     * @param $params    array of option : ignored
-    * @param $protocol string, communication protocol used
-    *
     * @return array, response ready to be encode
    **/
-   static function methodStatus($params, $protocol) {
+   static function methodStatus($params) {
 
       if (isset($params['help'])) {
          return ['help' => 'bool,optional'];
@@ -205,7 +203,6 @@ class PluginWebservicesMethodCommon {
       $resp       = [];
       $ok_master  = true;
       $ok_slave   = true;
-//      $ok         = true;
 
       // Check slave server connection
       if (DBConnection::isDBSlaveActive()) {
@@ -354,7 +351,6 @@ class PluginWebservicesMethodCommon {
             'phonenumber'    => $entity['phonenumber'],
             'fax'            => $entity['fax'],
             'email'          => $entity['email'],
-            'notepad'        => $entity['notepad'],
             'tag'            => $entity['tag']
          ];
       }

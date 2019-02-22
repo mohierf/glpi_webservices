@@ -164,14 +164,15 @@ class PluginWebservicesMethodInventaire extends PluginWebservicesMethodCommon {
       global $WEBSERVICE_LINKED_OBJECTS;
 
       if (isset($params['help'])) {
-         $options =  ['id'         => 'integer',
-                      'help'       => 'bool,optional',
+         $options =  ['itemtype'   => 'string',
+                      'id'         => 'integer',
+                      'help'       => 'bool, optional',
                       'show_label' => 'bool, optional',
                       'show_name'  => 'bool, optional'];
-          foreach ($WEBSERVICE_LINKED_OBJECTS as $option => $value) {
+         foreach ($WEBSERVICE_LINKED_OBJECTS as $option => $value) {
             $options[$option] = $value['help'];
-          }
-          return $options;
+         }
+         return $options;
       }
 
       if (!Session::getLoginUserID()) {

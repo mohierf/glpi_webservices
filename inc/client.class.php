@@ -220,8 +220,8 @@ class PluginWebservicesClient extends CommonDBTM {
 
       foreach ($WEBSERVICES_METHOD as $method => $function) {
          // Display if MySQL REGEXP match
-         if ($dbu->countElementsInTable($this->getTable(), "ID='".$this->fields['id'].
-                                  "' AND '".addslashes($method)."' REGEXP pattern")>0) {
+         if ($dbu->countElementsInTable($this->getTable(),
+                 ['WHERE' => "ID='".$this->fields['id']."' AND '".addslashes($method)."' REGEXP pattern"]) > 0) {
             $result = $function;
             if (is_array($function)) {
                if ($tmp = isPluginItemType($function[0])) {
@@ -395,7 +395,7 @@ class PluginWebservicesClient extends CommonDBTM {
       $menu['title']           = self::getMenuName();
       $menu['page']            = self::getSearchURL(false);
 
-         if (Session::haveRight("config", UPDATE)) {
+      if (Session::haveRight("config", UPDATE)) {
          $menu['links']['add'] = self::getFormURL(false);
       }
       return $menu;
